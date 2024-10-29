@@ -1,8 +1,6 @@
-﻿using Assets.Scripts.Entities;
+﻿using Assets.Scripts.Inventory.Tools;
 using Assets.Scripts.Inventory.ItemTypes;
 using Assets.Scripts.Inventory.Scriptables;
-using System.Collections;
-using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Assets.Scripts.Inventory.Controllers
@@ -20,9 +18,9 @@ namespace Assets.Scripts.Inventory.Controllers
             }
             if (Input.GetKeyDown(KeyCode.X))
             {
-                ItemContainer findedContainer = ItemReferences.Find(n => n.Data.Id == slots[CurrentItem].data.Id);
+                ItemContainer findedContainer = ItemReferences.Find(n => n.Data.Id == aviableItems[CurrentItem].data.Id);
                 DroppedItem item = Instantiate(findedContainer.Data.Prefab, scanPosition.position, Quaternion.identity).AddComponent<DroppedItem>();
-                item.Init(slots[CurrentItem]);
+                item.Init(aviableItems[CurrentItem]);
                 item.transform.localScale = findedContainer.Data.PrefabScale;
                 RemoveItem(CurrentItemId, 1);
             }
@@ -38,7 +36,7 @@ namespace Assets.Scripts.Inventory.Controllers
                             Destroy(item.gameObject);
                 }
             }
-            if (slots[CurrentItem] is WeaponItem weapon && slots[CurrentItem].data is WeaponData weaponData)
+            if (aviableItems[CurrentItem] is WeaponItem weapon && aviableItems[CurrentItem].data is WeaponData weaponData)
             {
                 switch (weaponData.WeaponType)
                 {
@@ -49,13 +47,13 @@ namespace Assets.Scripts.Inventory.Controllers
 
                             if (weapon.reloadTime <= 0f)
                             {
-                                Reload(weapon, weaponData);
+                                WeaponTool.Reload(weapon, weaponData);
                             }
                         }
                         if (Input.GetMouseButton(0) && weapon.fireTime <= Time.deltaTime && weapon.reloadTime <= 0f)
                         {
                             weapon.ammo--;
-                            Fire(weaponData);
+                            WeaponTool.Fire(weaponData, thisEntity, scanPosition);
                             InventoryChanged(weapon);
 
                             if (weapon.ammo <= 0)
@@ -86,7 +84,7 @@ namespace Assets.Scripts.Inventory.Controllers
                         if (Input.GetMouseButton(0) && weapon.fireTime <= Time.deltaTime)
                         {
                             weapon.fireTime = Time.time + 1f / weaponData.FireRate;
-                            Fire(weaponData);
+                            WeaponTool.Fire(weaponData, thisEntity, scanPosition);
                         }
                         break;
                 }

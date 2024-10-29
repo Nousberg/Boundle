@@ -17,18 +17,18 @@ namespace Assets.Scripts.Inventory
         [field: Header("References")]
         [SerializeField] protected Transform scanPosition;
         [field: SerializeField] public List<ItemContainer> ItemReferences { get; private set; } = new List<ItemContainer>();
-        [field: SerializeField] public List<CraftingMaterialData> Crafts = new List<CraftingMaterialData>();
+        [field: SerializeField] public List<CraftingRecipeData> Crafts = new List<CraftingRecipeData>();
 
         public event Action<DefaultItem, int> OnInventoryChanged;
 
         public int CurrentItemId { get; protected set; }
         public int CurrentItem { get; protected set; }
-        protected List<DefaultItem> slots = new List<DefaultItem>();
+        protected List<DefaultItem> aviableItems = new List<DefaultItem>();
         protected Entity thisEntity => GetComponent<Entity>();
 
         private void Start()
         {
-            slots.Add(new DefaultItem(ItemReferences.Find(n => n.Data.Id == 0).Data, 1));
+            aviableItems.Add(new DefaultItem(ItemReferences.Find(n => n.Data.Id == 0).Data, 1));
         }
 
         public void SetIndex(int index)
@@ -37,14 +37,14 @@ namespace Assets.Scripts.Inventory
                 return;
 
             CurrentItem = index;
-            CurrentItemId = slots[CurrentItem].data.Id;
-            OnInventoryChanged?.Invoke(slots[CurrentItem], CurrentItem);
+            CurrentItemId = aviableItems[CurrentItem].data.Id;
+            OnInventoryChanged?.Invoke(aviableItems[CurrentItem], CurrentItem);
         }
         public bool AddItem(DefaultItem item)
         {
-            if (slots.Count < MAX_ITEM_AMOUNT)
+            if (aviableItems.Count < MAX_ITEM_AMOUNT)
             {
-                DefaultItem slot = slots.Find(n => n.data.Id == item.data.Id);
+                DefaultItem slot = aviableItems.Find(n => n.data.Id == item.data.Id);
 
                 if (slot != null)
                 {
@@ -56,13 +56,13 @@ namespace Assets.Scripts.Inventory
                 else if (item.quantity > 0)
                 {
                     ItemContainer findedContainer = ItemReferences.Find(n => n.Data.Id == item.data.Id);
-                    slots.Add(item);
+                    aviableItems.Add(item);
                 }
 
                 if (item.quantity > 0 && slot != null)
                 {
-                    CurrentItem = slots.IndexOf(slot);
-                    CurrentItemId = slots[CurrentItem].data.Id;
+                    CurrentItem = aviableItems.IndexOf(slot);
+                    CurrentItemId = aviableItems[CurrentItem].data.Id;
                     OnInventoryChanged?.Invoke(new DefaultItem(slot.data, slot.quantity), CurrentItem);
                     UpdateCurrentItem();
 
@@ -76,7 +76,7 @@ namespace Assets.Scripts.Inventory
         {
             if (quantity > 0)
             {
-                DefaultItem slot = slots.Find(n => n.data.Id == id);
+                DefaultItem slot = aviableItems.Find(n => n.data.Id == id);
 
                 if (slot != null)
                     slot.quantity = Math.Min(slot.quantity - quantity, 0);
@@ -88,50 +88,49 @@ namespace Assets.Scripts.Inventory
             int requiredSum = Crafts.Find(n => n.Id == id).RequiredItems.Count;
             int resultedSum = 0;
 
-            for (int i = 0; i < quantity; i++)
+            foreach (var craft in Crafts)
             {
-                resultedSum = 0;
-
-                foreach (var craft in Crafts)
+                if (id == craft.Id)
                 {
-                    if (id == craft.Id)
+                    foreach (var recipe in craft.RequiredItems)
                     {
-                        foreach (var recipe in craft.RequiredItems)
+                        List<DefaultItem> items = aviableItems.FindAll(n => n.data.Id == recipe.Id);
+                        int sum = items.Sum(n => n.quantity);
+
+                        if (sum >= recipe.Quantity)
                         {
-                            foreach (var item in slots)
-                            {
-                                if (item.data.Id == recipe.Id && item.quantity == recipe.Quantity)
-                                {
-                                    requiredSum++;
-                                    slotsToRemove.Add(item);
-                                }
-                            }
+                            resultedSum++;
+                            slotsToRemove.AddRange(items);
                         }
-                        break;
                     }
+                    break;
                 }
+            }
 
-                if (resultedSum == requiredSum)
+            if (resultedSum == requiredSum)
+            {
+                foreach (var slot in slotsToRemove)
+                    RemoveItem(slot.data.Id, slot.quantity);
+
+                ItemData item = ItemReferences.Find(n => n.Data.Id == id).Data;
+
+                if (item is ItemData data)
                 {
-                    foreach (var slot in slotsToRemove)
-                        RemoveItem(slot.data.Id, slot.quantity);
-
-                    ItemData item = ItemReferences.Find(n => n.Data.Id == id).Data;
-
-                    if (item is ItemData data)
-                    {
-                        AddItem(new DefaultItem(data));
-                    }
-                    else if (item is WeaponData weaponData)
-                    {
-                        AddItem(new WeaponItem(weaponData, 0f, weaponData.BaseAmmo, weaponData.BaseAmmo));
-                    }
+                    AddItem(new DefaultItem(data));
+                }
+                else if (item is WeaponData weaponData)
+                {
+                    AddItem(new WeaponItem(weaponData, 0f, weaponData.BaseAmmo, weaponData.BaseAmmo));
                 }
             }
         }
+        public List<DefaultItem> GetAllItems()
+        {
+            return aviableItems;
+        }
         private void UpdateCurrentItem()
         {
-            ItemContainer findedContainer = ItemReferences.Find(n => n.Data.Id == slots[CurrentItem].data.Id);
+            ItemContainer findedContainer = ItemReferences.Find(n => n.Data.Id == aviableItems[CurrentItem].data.Id);
 
             if (findedContainer != null)
             {
@@ -146,28 +145,8 @@ namespace Assets.Scripts.Inventory
 
         protected void InventoryChanged(DefaultItem item)
         {
+            UpdateCurrentItem();
             OnInventoryChanged?.Invoke(item, CurrentItem);
-        }
-        protected void Reload(WeaponItem weaponContainer, WeaponData weaponData)
-        {
-            int v = weaponContainer.maxAmmo;
-            weaponContainer.maxAmmo -= Mathf.Clamp(weaponData.BaseAmmo - weaponContainer.ammo, 0, weaponContainer.maxAmmo);
-            weaponContainer.ammo += Mathf.Clamp(weaponData.BaseAmmo - weaponContainer.ammo, 0, v);
-        }
-        protected void Fire(WeaponData data)
-        {
-            RaycastHit hit;
-
-            for (int i = 0; i < data.BulletsPerShoot; i++)
-                if (Physics.Raycast(scanPosition.position, scanPosition.forward, out hit, data.Range))
-                {
-                    Entity entity = hit.collider.GetComponent<Entity>();
-
-                    if (entity != null)
-                    {
-                        entity.TakeDamage(data.Damage, thisEntity, data.TypeOfDamage);
-                    }
-                }
         }
     }
 }

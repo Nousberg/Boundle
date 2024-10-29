@@ -7,8 +7,6 @@ namespace Assets.Scripts.Saving
 {
     public static class JsonSaver
     {
-        public static List<string> Saves { get; private set; } = new List<string>();
-
         private static string savePath => "Saves/";
         private static List<char> disallowedSymbols = new List<char>() { '#', '@', '!', '*', '&', '%', '$', '^' };
 
@@ -31,7 +29,7 @@ namespace Assets.Scripts.Saving
 
             string fullPath = Path.Combine(savePath, name);
             File.WriteAllText(fullPath, json);
-            Saves.Add(name);
+            SavesData.Saves.Add(name);
             return true;
         }
         public static T Load<T>(string name)

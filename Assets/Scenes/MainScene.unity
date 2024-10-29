@@ -960,9 +960,9 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1141151325}
-  - {fileID: 717408509}
   - {fileID: 1403480825}
   - {fileID: 1413210462}
+  - {fileID: 717408509}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -1065,12 +1065,15 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 361082686}
+  - component: {fileID: 361082689}
+  - component: {fileID: 361082690}
   - component: {fileID: 361082687}
+  - component: {fileID: 361082694}
   - component: {fileID: 361082691}
   - component: {fileID: 361082688}
-  - component: {fileID: 361082690}
-  - component: {fileID: 361082689}
+  - component: {fileID: 361082693}
   - component: {fileID: 361082692}
+  - component: {fileID: 361082695}
   m_Layer: 0
   m_Name: LocalPlayer
   m_TagString: Untagged
@@ -1108,9 +1111,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f0db25fd93fc5ae469993b6a352ef7e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  <BaseHealth>k__BackingField: 116.9
+  <BaseHealth>k__BackingField: 4333
   <Invulnerable>k__BackingField: 0
   <DamageSensors>k__BackingField: 00
+  <Health>k__BackingField: 0
 --- !u!114 &361082688
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1125,27 +1129,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   feets: {fileID: 1052000758}
   cam: {fileID: 290768768}
-  FeetLength: 1
-  jumpPower: 5
-  walkSpeed: 8
-  runSpeedBoost: 2
-  flySpeed: 12
+  movementData: {fileID: 11400000, guid: 3ff80da9f3cfb7342a2a4e82486b1a9d, type: 2}
+  feetLength: 0.5
   flyLerpSpeed: 0.1
-  Sensitivity: 1
-  zWalkLookOffset: 5
-  zLookOffset: 2.5
-  zLookOffsetSpeed: 5
-  jumpCameraOffset: 1
-  maxFov: 120
-  fovLerpSpeed: 3
-  fovOffsetAmount: 3
-  maxCamRotY: 90
-  camRotLerpSpeed: 15
-  noiseGenerationSpeed: 1
-  <NoiseLerpSpeed>k__BackingField: 1
-  <NoiseRotation>k__BackingField: {x: 0.2, y: 0.2, z: 0.2}
-  <DynamicRotAmplitudeFactor>k__BackingField: {x: 0.1, y: 0.1, z: 0.1}
-  <DynamicRotFreqerencyFactor>k__BackingField: 1
 --- !u!136 &361082689
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -1213,7 +1199,7 @@ MonoBehaviour:
   - {fileID: 200263579}
   Crafts:
   - {fileID: 11400000, guid: 2d2527139eee98646929971def70f1cb, type: 2}
-  raycastDistance: 0
+  raycastDistance: 23
 --- !u!114 &361082692
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1230,6 +1216,62 @@ MonoBehaviour:
   Duration: Infinity
   Cooldown: 0
   DelayBeforeStart: 0
+--- !u!114 &361082693
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 361082685}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 779e242c97357e741ad5e43c54d22bc6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cam: {fileID: 290768768}
+  Sensitivity: 1
+  zWalkLookOffset: 2
+  zLookOffset: 2
+  zLookOffsetSpeed: 12
+  jumpCameraOffset: 2
+  maxFov: 100
+  fovLerpSpeed: 1
+  fovOffsetAmount: 1
+  maxCamRotY: 90
+  camRotLerpSpeed: 15
+  noiseGenerationSpeed: 1
+  noiseLerpSpeed: 0.4
+  noiseRotation: {x: 2, y: 2, z: 2}
+  dynamicRotAmplitudeFactor: {x: 0, y: 0.3, z: 0}
+  dynamicRotFrequencyFactor: 1
+--- !u!114 &361082694
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 361082685}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc7c25d3f7c975540a073ed1d2729d27, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &361082695
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 361082685}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27b457f29e1108d46b30d8817db77daa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  healthImage: {fileID: 717408510}
+  transperencySinAmplitude: 1
+  transperencySinFrequerency: 2
+  transperencyLerpSpeed: 1
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -4327,6 +4369,7 @@ MonoBehaviour:
   swayLerpSpeed: 3
   maxRotSwayAmount: 5
   rotSwayAmount: 2
+  keyRotSwayAmount: 4
   rotSwayLerpSpeed: 20
 --- !u!1 &1791302169
 GameObject:

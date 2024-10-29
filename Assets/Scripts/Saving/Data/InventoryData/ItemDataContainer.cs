@@ -8,16 +8,12 @@ namespace Assets.Scripts.Saving
 {
     public class ItemDataContainer
     {
-        public int id;
-        public int currentAmmo, maxAmmo;
-        public float currentOverheat;
+        public int id, quantity;
 
-        public ItemDataContainer(int id, float currentOverheat, int currentAmmo, int maxAmmo)
+        public ItemDataContainer(int id, int quantity)
         {
             this.id = id;
-            this.currentOverheat = currentOverheat;
-            this.currentAmmo = currentAmmo;
-            this.maxAmmo = maxAmmo;
+            this.quantity = quantity;
         }
     }
 }

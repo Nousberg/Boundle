@@ -4,7 +4,7 @@ namespace Assets.Scripts.Entities.Effects
 {
     public class Resistance : Effect, IDamageEffect<Resistance>
     {
-        public Resistance(float duration, float amplifier) : base(duration, amplifier)
+        public Resistance(float duration, float amplifier, bool infinite) : base(duration, amplifier)
         {
         }
 

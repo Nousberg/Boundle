@@ -6,7 +6,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace Assets.Scripts.Entities
 {
-    //[RequireComponent(typeof(EntityInventory))]
+    [RequireComponent(typeof(EffectContainer))]
     public class Entity : MonoBehaviour
     {
         [field: Header("Health")]
@@ -14,13 +14,13 @@ namespace Assets.Scripts.Entities
         [field: SerializeField] public bool Invulnerable { get; private set; }
         [field: SerializeField] public List<DamageType> DamageSensors { get; private set; } = new List<DamageType>();
 
-        public List<Effect> Effects { get; private set; } = new List<Effect>();
-
         public delegate void DamageHandler(float amount, Entity attacker, DamageType type);
         public event DamageHandler OnDamage;
 
         public float Blood { get; private set; }
-        public float Health { get; private set; }
+        [field: SerializeField] public float Health { get; private set; }
+
+        private EffectContainer effects => GetComponent<EffectContainer>();
 
         private void OnValidate()
         {
@@ -31,28 +31,14 @@ namespace Assets.Scripts.Entities
         {
             Blood = BaseHealth;
             Health = BaseHealth;
-        }
 
-        private void Update()
-        {
-            foreach (var e in Effects)
-            {
-                if (e.Duration <= 0f)
-                {
-                    Effects.Remove(e);
-                    continue;
-                }
-                e.SetDuration(e.Duration - Time.deltaTime);
-            }
+            effects.ApplyEffect(new Resistance(0f, 23f, true));
         }
-
         public void TakeDamage(float amount, Entity attacker, DamageType type)
         {
             if ((DamageSensors.Contains(type) && !Invulnerable) || type == DamageType.Generic)
             {
-                foreach (var e in Effects)
-                    if (e is IDamageEffect<Effect> damageEffect)
-                        damageEffect.ModifyDamage(ref amount, attacker, type);
+                effects.CalculateDamage(ref amount, attacker, type);
 
                 StartCoroutine(CalculateBloodloss(amount));
                 OnDamage?.Invoke(amount, attacker, type);
@@ -86,23 +72,6 @@ namespace Assets.Scripts.Entities
 
                 yield return null;
             }
-        }
-        public void ApplyEffect(Effect effect)
-        {
-            if (Effects.Contains(effect))
-            {
-                effect.SetDuration(effect.Duration + effect.Duration);
-
-                if (effect is Resistance resistance)
-                    resistance.SetAmplifier(resistance.Amplifier + resistance.Amplifier);
-            }
-        }
-        public void RemoveEffect(int index)
-        {
-            if (index > 0 || index >= Effects.Count)
-                return;
-
-            Effects.RemoveAt(index);
         }
         public void Kill()
         {

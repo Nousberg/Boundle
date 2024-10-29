@@ -19,6 +19,7 @@ namespace Assets.Scripts.Ui.Inventory
         [Header("Rotation Properties")]
         [SerializeField] private float maxRotSwayAmount;
         [SerializeField] private float rotSwayAmount;
+        [SerializeField] private float keyRotSwayAmount;
         [SerializeField] private float rotSwayLerpSpeed;
 
         private Vector2 mouseInput;
@@ -45,7 +46,7 @@ namespace Assets.Scripts.Ui.Inventory
 
             transform.localPosition = Vector3.Lerp(transform.localPosition, targetPosition, swayLerpSpeed * Time.deltaTime);
 
-            targetRotation = initialRot * Quaternion.Euler(0f, 0f, Mathf.Clamp(mouseInput.x + keyInput.y, -maxRotSwayAmount, maxRotSwayAmount) * rotSwayAmount);
+            targetRotation = initialRot * Quaternion.Euler(0f, 0f, Mathf.Clamp(mouseInput.x + keyInput.y * keyRotSwayAmount, -maxRotSwayAmount, maxRotSwayAmount) * rotSwayAmount);
 
             transform.localRotation = Quaternion.Slerp(transform.localRotation, targetRotation, rotSwayLerpSpeed * Time.deltaTime);
         }

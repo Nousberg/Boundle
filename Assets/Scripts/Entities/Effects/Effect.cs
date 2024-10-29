@@ -6,11 +6,13 @@ namespace Assets.Scripts.Entities.Effects
     {
         public float Duration { get; private set; }
         public float Amplifier { get; private set; }
+        public bool Infinite { get; private set; }
 
-        public Effect(float duration, float amplifier)
+        public Effect(float duration, float amplifier, bool infinite = false)
         {
             Duration = duration;
             Amplifier = Math.Min(amplifier, 0f);
+            Infinite = infinite;
         }
 
         public void SetDuration(float value)
