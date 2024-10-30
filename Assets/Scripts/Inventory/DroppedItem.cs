@@ -12,12 +12,5 @@ namespace Assets.Scripts.Inventory
         {
             this.item = item;
         }
-
-        private void OnCollisionStay(Collision collision)
-        {
-            Entity e = collision.gameObject.GetComponent<Entity>();
-            if (e != null)
-                e.TakeDamage(10f, e, DamageType.Generic);
-        }
     }
 }

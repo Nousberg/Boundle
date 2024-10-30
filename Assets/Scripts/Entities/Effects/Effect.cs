@@ -11,7 +11,7 @@ namespace Assets.Scripts.Entities.Effects
         public Effect(float duration, float amplifier, bool infinite = false)
         {
             Duration = duration;
-            Amplifier = Math.Min(amplifier, 0f);
+            Amplifier = Math.Max(amplifier, 1f);
             Infinite = infinite;
         }
 

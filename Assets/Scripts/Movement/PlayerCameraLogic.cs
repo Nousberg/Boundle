@@ -43,8 +43,10 @@ namespace Assets.Scripts.Movement
         private float _dynamicRotFreqerencyFactor;
         private float noiseRotLerpSpeed;
         private float spreadOffset;
-        private Vector3 collCenter;
         private float collSize;
+        private float healthAspect;
+        private float velocity;
+        private Vector3 collCenter;
         private Vector3 _dynamicRotAmplitudeFactor;
         private Vector3 dynamicOffset;
         private Vector3 keyInput;
@@ -78,8 +80,8 @@ namespace Assets.Scripts.Movement
             cam.transform.localRotation = Quaternion.Slerp(cam.transform.localRotation, targetRot, camRotLerpSpeed * Time.deltaTime);
             cam.fieldOfView = Mathf.Clamp(Mathf.Lerp(cam.fieldOfView, defaultFov + playerMovement.CurrentVelocity * fovOffsetAmount, fovLerpSpeed * Time.deltaTime), 0f, maxFov);
 
-            float healthAspect = Mathf.Max(player.Health / player.BaseHealth, 0.1f);
-            float velocity = Mathf.Clamp(playerMovement.CurrentVelocity, 0.25f, 1f);
+            healthAspect = Mathf.Max(player.Health / player.BaseHealth, 0.1f);
+            velocity = Mathf.Clamp(playerMovement.CurrentVelocity, 0.25f, 1f);
             noiseRotLerpSpeed = noiseLerpSpeed / healthAspect * velocity;
             _dynamicRotAmplitudeFactor = dynamicRotAmplitudeFactor / healthAspect * velocity;
             _dynamicRotFreqerencyFactor = dynamicRotFrequencyFactor / healthAspect * velocity;

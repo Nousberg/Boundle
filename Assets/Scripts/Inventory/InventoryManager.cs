@@ -17,7 +17,7 @@ namespace Assets.Scripts.Inventory
         [field: Header("References")]
         [SerializeField] protected Transform scanPosition;
         [field: SerializeField] public List<ItemContainer> ItemReferences { get; private set; } = new List<ItemContainer>();
-        [field: SerializeField] public List<CraftingRecipeData> Crafts = new List<CraftingRecipeData>();
+        [field: SerializeField] public List<CraftingRecipeData> CraftRecipes = new List<CraftingRecipeData>();
 
         public event Action<DefaultItem, int> OnInventoryChanged;
 
@@ -84,23 +84,24 @@ namespace Assets.Scripts.Inventory
         }
         public void CraftItem(int id, int quantity)
         {
-            List<DefaultItem> slotsToRemove = new List<DefaultItem>();
-            int requiredSum = Crafts.Find(n => n.Id == id).RequiredItems.Count;
+            int requiredSum = CraftRecipes.Find(n => n.Id == id).RequiredItems.Count;
             int resultedSum = 0;
 
-            foreach (var craft in Crafts)
+            foreach (var recipe in CraftRecipes)
             {
-                if (id == craft.Id)
+                if (id == recipe.Id)
                 {
-                    foreach (var recipe in craft.RequiredItems)
+                    foreach (var craftMaterial in recipe.RequiredItems)
                     {
-                        List<DefaultItem> items = aviableItems.FindAll(n => n.data.Id == recipe.Id);
+                        List<DefaultItem> items = aviableItems.FindAll(n => n.data.Id == craftMaterial.Id);
                         int sum = items.Sum(n => n.quantity);
 
-                        if (sum >= recipe.Quantity)
+                        foreach (var item in items)
+                            RemoveItem(item.data.Id, craftMaterial.Quantity / items.Count);
+
+                        if (sum >= craftMaterial.Quantity)
                         {
                             resultedSum++;
-                            slotsToRemove.AddRange(items);
                         }
                     }
                     break;
@@ -109,9 +110,6 @@ namespace Assets.Scripts.Inventory
 
             if (resultedSum == requiredSum)
             {
-                foreach (var slot in slotsToRemove)
-                    RemoveItem(slot.data.Id, slot.quantity);
-
                 ItemData item = ItemReferences.Find(n => n.Data.Id == id).Data;
 
                 if (item is ItemData data)
