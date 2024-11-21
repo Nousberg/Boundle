@@ -7,10 +7,9 @@ namespace Assets.Scripts.Saving
 {
     public static class JsonSaver
     {
-        private static string savePath => "Saves/";
         private static List<char> disallowedSymbols = new List<char>() { '#', '@', '!', '*', '&', '%', '$', '^' };
 
-        public static bool Save(object data, string name)
+        public static bool Save(object data, string savePath, string name)
         {
             foreach (char c in name.ToCharArray())
             {
@@ -27,19 +26,15 @@ namespace Assets.Scripts.Saving
                     TypeNameHandling = TypeNameHandling.Auto
                 });
 
-            string fullPath = Path.Combine(savePath, name);
-            File.WriteAllText(fullPath, json);
-            SavesData.Saves.Add(name);
+            File.WriteAllText(savePath + name, json);
             return true;
         }
-        public static T Load<T>(string name)
+        public static T Load<T>(string savePath, string name)
         {
-            string fullPath = Path.Combine(savePath, name);
-
-            if (!File.Exists(fullPath))
+            if (!File.Exists(savePath + name))
                 return default;
 
-            string json = File.ReadAllText(fullPath);
+            string json = File.ReadAllText(savePath + name);
             return JsonConvert.DeserializeObject<T>(json,
                 new JsonSerializerSettings
                 {

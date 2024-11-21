@@ -3,28 +3,35 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
 namespace Assets.Scripts.Entities
 {
-    [RequireComponent(typeof(EffectContainer))]
     public class Entity : MonoBehaviour
     {
         [field: Header("Health")]
+        [Min(0f)][SerializeField] private float criticalFallVelocity;
         [field: Min(0f)][field: SerializeField] public float BaseHealth { get; private set; }
         [field: SerializeField] public bool Invulnerable { get; private set; }
         [field: SerializeField] public List<DamageType> DamageSensors { get; private set; } = new List<DamageType>();
 
         [field: Header("Food")]
-        [Min(0f)][SerializeField] private float foodDecreaseRate;
-        [Range(0f, 1f)][SerializeField] private float damageFromLowWaterRateAmplifier;
-        [Range(0f, 1f)][SerializeField] private float criticalWaterRate;
         [field: Min(0f)][field: SerializeField] public float BaseFood { get; private set; }
+        [Range(0f, 1f)][SerializeField] private float hungerDecreaseRate;
+        [Range(0f, 1f)][SerializeField] private float waterDecreaseRate;
+        [Range(0f, 1f)][SerializeField] private float damageFromLowHungerAmplifier;
+        [Range(0f, 1f)][SerializeField] private float criticalHungerRate;
 
-        public delegate void DamageHandler(float amount, Entity attacker, DamageType type);
-        public event DamageHandler OnDamage;
+        public List<Effect> Effects { get; private set; } = new List<Effect>();
 
+        public delegate void DamageHandler(ref float amount, DamageType type, Entity attacker);
+
+        public event DamageHandler OnDamageTaken;
+        public event Action OnEffectAdded;
+        public event Action OnEffectRemoved;
+        public event Action OnDeath;
         public event Action OnHealthChanged;
         public event Action OnFoodChanged;
 
@@ -33,14 +40,18 @@ namespace Assets.Scripts.Entities
         public float Food { get; private set; }
         public float Water { get; private set; }
 
-        private EffectContainer effects => GetComponent<EffectContainer>();
-
         private void OnValidate()
         {
             if (!DamageSensors.Contains(DamageType.Generic))
                 DamageSensors.Add(DamageType.Generic);
 
             DamageSensors = DamageSensors.Distinct().ToList();
+        }
+        private void OnCollisionEnter(Collision collision)
+        {
+            float velocity = collision.relativeVelocity.magnitude;
+            if (velocity >= criticalFallVelocity)
+                TakeDamage(velocity, this, DamageType.Gravity);
         }
         private void Start()
         {
@@ -50,17 +61,13 @@ namespace Assets.Scripts.Entities
             Health = BaseHealth;
 
             StartCoroutine(StartHungerCycle());
-            effects.ApplyEffect(new Resistance(0f, 7f, true));
         }
         public void TakeDamage(float amount, Entity attacker, DamageType type)
         {
             if ((DamageSensors.Contains(type) && !Invulnerable) || type == DamageType.Generic)
             {
-                effects.CalculateDamage(ref amount, attacker, type);
-
+                OnDamageTaken?.Invoke(ref amount, type, attacker);
                 StartCoroutine(CalculateBloodloss(amount));
-                OnDamage?.Invoke(amount, attacker, type);
-                OnHealthChanged?.Invoke();
             }
         }
         public void RestoreFood(float foodAmount, float waterAmount = 0f)
@@ -71,6 +78,40 @@ namespace Assets.Scripts.Entities
                 Water = Mathf.Clamp(Water + waterAmount, Water, BaseFood);
 
             OnFoodChanged?.Invoke();
+        }
+        public void ApplyEffect(Effect effect)
+        {
+            if (!effect.isEnded)
+            {
+                effect.OnEffectEnded += HandleEffectEnd;
+                Effects.Add(effect);
+                OnEffectAdded?.Invoke();
+            }
+        }
+        public void RemoveEffect(Type type)
+        {
+            Effect findedEffect = Effects.Find(n => n.GetType() == type);
+
+            if (findedEffect != null)
+            {
+                findedEffect.StopEffect();
+                Effects.Remove(findedEffect);
+                OnEffectRemoved?.Invoke();
+            }
+        }
+        public void Kill()
+        {
+            TakeDamage(Health, this, DamageType.Generic);
+            OnHealthChanged?.Invoke();
+        }
+        public void ToggleInvulnerability(bool state)
+        {
+            Invulnerable = state;
+        }
+
+        private void HandleEffectEnd(Effect effect)
+        {
+            Effects.Remove(effect);
         }
         private IEnumerator CalculateBloodloss(float initialBloodloss)
         {
@@ -83,20 +124,24 @@ namespace Assets.Scripts.Entities
             float damagePerSecond = initialBloodloss / totalDuration;
             float elapsedTime = 0f;
 
-            float healthDamage = 0f;
-            float currentBloodloss = 0f;
-
             Health = Mathf.Clamp(Health - initialBloodloss / (Blood / BaseHealth), 0f, BaseHealth);
 
             while (elapsedTime < totalDuration)
             {
                 elapsedTime += Time.deltaTime;
-                healthDamage = damagePerSecond * Time.deltaTime;
+                float currentBloodloss = damagePerSecond * Time.deltaTime;
 
                 Blood = Mathf.Clamp(Blood - currentBloodloss, 0f, BaseHealth);
 
-                healthDamage = currentBloodloss / Mathf.Max(0.1f, Blood / BaseHealth);
+                float healthDamage = currentBloodloss / Mathf.Max(0.1f, Blood / BaseHealth);
                 Health = Mathf.Clamp(Health - healthDamage, 0f, BaseHealth);
+                OnHealthChanged?.Invoke();
+
+                if (Health == 0f)
+                {
+                    OnDeath?.Invoke();
+                    break;
+                }
 
                 yield return null;
             }
@@ -105,35 +150,26 @@ namespace Assets.Scripts.Entities
         {
             while (true)
             {
-                yield return new WaitForSeconds(foodDecreaseRate / BaseFood);
+                yield return new WaitForSeconds(1f / Mathf.Max(Food / BaseFood, 0.15f));
 
-                if (Food > 0)
-                    Food--;
+                if (Water > 0 || Food > 0)
+                    OnFoodChanged?.Invoke();
 
-                if (Water > 0)
-                    Water--;
+                if (Food > 0f)
+                    Food -= BaseFood * hungerDecreaseRate;
 
-                if (Water < BaseFood * criticalWaterRate)
-                    TakeDamage(Health * (1f - Water / BaseFood) * damageFromLowWaterRateAmplifier, this, DamageType.Generic);
+                if (Water > 0f)
+                    Water -= BaseFood * waterDecreaseRate;
 
-                OnFoodChanged?.Invoke();
+                if (Food < BaseFood * criticalHungerRate)
+                    TakeDamage(Health * (1f - Food / BaseFood) * damageFromLowHungerAmplifier, this, DamageType.Generic);
             }
-        }
-
-        public void Kill()
-        {
-            Health = 0f;
-            OnHealthChanged?.Invoke();
-        }
-        public void ToggleInvulnerability(bool state)
-        {
-            Invulnerable = state;
         }
     }
     public enum DamageType : byte
     {
         Generic,
-        Fall,
+        Gravity,
         Kenetic,
         Magic,
         Fire

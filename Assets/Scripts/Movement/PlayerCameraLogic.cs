@@ -1,4 +1,5 @@
 ﻿using Assets.Scripts.Entities;
+using Assets.Scripts.Ui.Player;
 using System.Collections;
 using UnityEngine;
 
@@ -9,6 +10,7 @@ namespace Assets.Scripts.Movement
     public class PlayerCameraLogic : MonoBehaviour
     {
         [field: Header("References")]
+        [SerializeField] private TouchscreenJoystick joystick;
         [SerializeField] private Camera cam;
 
         [Header("Camera Properties")]
@@ -33,9 +35,6 @@ namespace Assets.Scripts.Movement
         private PlayerMovementLogic playerMovement => GetComponent<PlayerMovementLogic>();
         private Entity player => GetComponent<Entity>();
         private Rigidbody rb => GetComponent<Rigidbody>();
-        private float _flySpeed;
-        private bool isCrouch;
-        private float currentWalkSpeed;
         private float xRot;
         private float zRot;
         private float defaultFov;
@@ -43,28 +42,48 @@ namespace Assets.Scripts.Movement
         private float _dynamicRotFreqerencyFactor;
         private float noiseRotLerpSpeed;
         private float spreadOffset;
-        private float collSize;
         private float healthAspect;
         private float velocity;
         private Vector3 collCenter;
         private Vector3 _dynamicRotAmplitudeFactor;
         private Vector3 dynamicOffset;
         private Vector3 keyInput;
-        private Vector3 mouseInput;
+        private Vector2 mouseInput;
         private Vector3 moveVector;
         private Vector3 curNoiseRot;
         private Vector3 noiseRot;
         private Vector3 generatedNoise;
         private Quaternion targetRot;
+        private Transform cameraTransform;
+
+        private Vector2? previousTouchPosition;
 
         private void Start()
         {
             defaultFov = cam.fieldOfView;
+            cameraTransform = cam.transform;
         }
         private void Update()
         {
-            keyInput = new Vector3(Input.GetAxis("Horizontal"), 0f, Input.GetAxis("Vertical"));
-            mouseInput = new Vector3(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"), 0f) * Sensitivity;
+            keyInput = Application.platform == RuntimePlatform.Android && joystick.joystickInput.sqrMagnitude > 0f ? joystick.joystickInput : new Vector3(Input.GetAxis("Horizontal"), 0f, Input.GetAxis("Vertical"));
+
+            if (Application.platform == RuntimePlatform.Android && Input.touchCount > 0)
+            {
+                Touch touch = Input.GetTouch(0);
+                if (previousTouchPosition.HasValue)
+                {
+                    Vector2 touchDelta = touch.position - previousTouchPosition.Value;
+                    mouseInput = touch.position.x > Screen.width / 2 ? touchDelta * Sensitivity : Vector2.zero;
+                }
+                previousTouchPosition = touch.position;
+
+                if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
+                    previousTouchPosition = null;
+            }
+            else
+            {
+                mouseInput = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * Sensitivity;
+            }
 
             StartCoroutine("GenerateNoise");
             noiseRot = Vector3.Lerp(noiseRot, generatedNoise, noiseRotLerpSpeed * Time.deltaTime);
@@ -77,16 +96,17 @@ namespace Assets.Scripts.Movement
             targetRot = Quaternion.Euler(Mathf.Clamp(xRot + jumpCameraOffset * rb.velocity.y, -maxCamRotY, maxCamRotY), 0f, -zRot) * Quaternion.Euler(dynamicOffset * (playerMovement.IsWaking ? 1f : 0f)) * Quaternion.Euler(noiseRot);
             spreadOffset = 0f;
 
-            cam.transform.localRotation = Quaternion.Slerp(cam.transform.localRotation, targetRot, camRotLerpSpeed * Time.deltaTime);
+            cameraTransform.transform.localRotation = Quaternion.Slerp(cam.transform.localRotation, targetRot, camRotLerpSpeed * Time.deltaTime);
             cam.fieldOfView = Mathf.Clamp(Mathf.Lerp(cam.fieldOfView, defaultFov + playerMovement.CurrentVelocity * fovOffsetAmount, fovLerpSpeed * Time.deltaTime), 0f, maxFov);
 
-            healthAspect = Mathf.Max(player.Health / player.BaseHealth, 0.1f);
-            velocity = Mathf.Clamp(playerMovement.CurrentVelocity, 0.25f, 1f);
+            healthAspect = Mathf.Max(player.Health / player.BaseHealth, 0.7f);
+            velocity = Mathf.Clamp(playerMovement.CurrentVelocity, 0.4f, 1f);
             noiseRotLerpSpeed = noiseLerpSpeed / healthAspect * velocity;
             _dynamicRotAmplitudeFactor = dynamicRotAmplitudeFactor / healthAspect * velocity;
             _dynamicRotFreqerencyFactor = dynamicRotFrequencyFactor / healthAspect * velocity;
             curNoiseRot = noiseRotation / healthAspect * velocity;
         }
+
         private IEnumerator GenerateNoise()
         {
             yield return new WaitForSeconds(1f / noiseGenerationSpeed);
@@ -95,9 +115,10 @@ namespace Assets.Scripts.Movement
                 Random.Range(-curNoiseRot.y, curNoiseRot.y),
                 Random.Range(-curNoiseRot.z, curNoiseRot.z));
         }
-        public void Spread(int v1, int v2, float value)
+
+        private void Spread(float amount)
         {
-            spreadOffset = value;
+            spreadOffset = amount;
         }
     }
 }

@@ -1,27 +1,58 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Assets.Scripts.Entities.Effects
 {
     public abstract class Effect
     {
-        public float Duration { get; private set; }
+        public readonly bool Infinite;
+
+        public int Duration { get; private set; }
         public float Amplifier { get; private set; }
-        public bool Infinite { get; private set; }
+        public bool isEnded { get; private set; }
 
-        public Effect(float duration, float amplifier, bool infinite = false)
+        public event Action<Effect> OnEffectEnded;
+
+        private CancellationTokenSource tokenSource;
+
+        public Effect(int duration, float amplifier, bool infinite = false)
         {
-            Duration = duration;
             Amplifier = Math.Max(amplifier, 1f);
+            Duration = duration;
             Infinite = infinite;
-        }
 
-        public void SetDuration(float value)
-        {
-            Duration = Math.Max(value, 0);
+            if (!infinite)
+            {
+                tokenSource = new CancellationTokenSource();
+                _ = StartEffectLifeCycle(tokenSource.Token);
+            }
         }
         public void SetAmplifier(float value)
         {
-            Amplifier = Math.Min(value, 0f);
+            Amplifier = Math.Max(value, 0f);
+        }
+        public void SetDuration(int value)
+        {
+            if (value < 0)
+                return;
+
+            Duration = value;
+            tokenSource.Cancel();
+            _ = StartEffectLifeCycle(tokenSource.Token);
+        }
+        public void StopEffect()
+        {
+            tokenSource?.Cancel();
+            isEnded = true;
+            OnEffectEnded?.Invoke(this);
+        }
+
+        private async Task StartEffectLifeCycle(CancellationToken token)
+        {
+            await Task.Delay(Duration, token);
+            isEnded = true;
+            OnEffectEnded?.Invoke(this);
         }
     }
 }
