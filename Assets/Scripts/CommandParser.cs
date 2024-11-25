@@ -1,15 +1,14 @@
 ﻿using Assets.Scripts.Entities;
 using Assets.Scripts.Entities.Effects;
-using Assets.Scripts.Network;
 using System;
 using UnityEngine;
 
 namespace Assets.Scripts
 {
-    [RequireComponent(typeof(ChatInputHandler))]
     public class CommandParser : MonoBehaviour
     {
-        private ChatInputHandler chat => GetComponent<ChatInputHandler>();
+        public event Action<string> OnSuccefulParse;
+        public event Action<string> OnFailureParse;
 
         public bool TryParse(string cmd, Entity initiator)
         {
@@ -25,50 +24,53 @@ namespace Assets.Scripts
             switch (instanceCmd[0])
             {
                 case "effect":
-                    if (instanceCmd.Length > 5)
-                    {
-                        float amplifier;
-                        int duration;
-                        bool infinite;
-
-                        try
-                        {
-                            duration = int.Parse(instanceCmd[3]);
-                            amplifier = float.Parse(instanceCmd[4]);
-                            infinite = bool.Parse(instanceCmd[5]);
-                        }
-                        catch
-                        {
-                            return false;
-                        }
-
                         if (instanceCmd[1] == "add")
-                            if (instanceCmd[2] == "resistance")
+                        {
+                            if (instanceCmd.Length > 5)
                             {
-                                initiator.ApplyEffect(new Resistance(initiator, duration, amplifier, infinite));
-                                chat.HandleMessage("Applied " + instanceCmd[2], string.Empty);
-                                return true;
-                            }
-                            else if (instanceCmd[2] == "godness")
-                            {
-                                initiator.ApplyEffect(new Godness(initiator, duration, amplifier, infinite));
-                                chat.HandleMessage("Applied " + instanceCmd[2], string.Empty);
-                                return true;
-                            }
-                            else if (instanceCmd[2] == "remove")
+                                float amplifier;
+                                int duration;
+                                bool infinite;
+
+                                try
+                                {
+                                    duration = int.Parse(instanceCmd[3]);
+                                    amplifier = float.Parse(instanceCmd[4]);
+                                    infinite = bool.Parse(instanceCmd[5]);
+                                }
+                                catch
+                                {
+                                    OnFailureParse?.Invoke("Unexpected value at input parameter");
+                                    return false;
+                                }
+
                                 if (instanceCmd[2] == "resistance")
                                 {
-                                    initiator.RemoveEffect(typeof(Resistance));
-                                    chat.HandleMessage("Removed " + instanceCmd[2], string.Empty);
+                                    initiator.ApplyEffect(new Resistance(initiator, duration, amplifier, infinite));
+                                    OnSuccefulParse?.Invoke("Applied effect");
                                     return true;
                                 }
                                 else if (instanceCmd[2] == "godness")
                                 {
-                                    initiator.RemoveEffect(typeof(Godness));
-                                    chat.HandleMessage("Removed " + instanceCmd[2], string.Empty);
+                                    initiator.ApplyEffect(new Godness(initiator, duration, amplifier, infinite));
+                                    OnSuccefulParse?.Invoke("Applied effect");
                                     return true;
                                 }
-                    }
+                            }
+                        }
+                        else if (instanceCmd[1] == "remove")
+                            if (instanceCmd[2] == "resistance")
+                            {
+                                initiator.RemoveEffect(typeof(Resistance));
+                                OnSuccefulParse?.Invoke("Removed effect");
+                                return true;
+                            }
+                            else if (instanceCmd[2] == "godness")
+                            {
+                                initiator.RemoveEffect(typeof(Godness));
+                                OnSuccefulParse?.Invoke("Removed effect");
+                                return true;
+                            }
                     break;
 
                 case "damage":
@@ -86,6 +88,7 @@ namespace Assets.Scripts
                         }
                         catch
                         {
+                            OnFailureParse?.Invoke("Unexpected value at input parameter");
                             return false;
                         }
 
@@ -95,9 +98,12 @@ namespace Assets.Scripts
                             source.damageType = damageType;
                             source.damageFrequency = frequency;
                         }
+                        OnSuccefulParse?.Invoke("Changes applied");
+                        return true;
                     }
                     break;
             }
+            OnFailureParse?.Invoke("Unknown command");
             return false;
         }
     }

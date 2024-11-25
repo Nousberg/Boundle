@@ -16,13 +16,13 @@ namespace Assets.Scripts.Ui.Player
         public bool CriticalDistance { get; private set; }
         public Vector3 joystickInput { get; private set; }
 
+        private RectTransform joystickRect => joystick.GetComponent<RectTransform>();
         private Color targetParentJoystickColor;
         private Color startParentJoystickColor;
         private Color targetJoystickColor;
         private Color startJoystickColor;
         private Vector2 startJoystickPosition;
         private Image joystickParentImage;
-        private RectTransform joystickRect => joystick.GetComponent<RectTransform>();
 
         private void Start()
         {

@@ -3,15 +3,20 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
 
 namespace Assets.Scripts.Entities
 {
+    [RequireComponent(typeof(PhysicsPropertiesContrainer))]
     public class Entity : MonoBehaviour
     {
-        [field: Header("Health")]
+        [field: Header("Entity properties")]
+        [field: SerializeField] public EntityType MyType { get; private set; }
+
+        [Header("Health")]
+        [Range(0f, 1f)][SerializeField] private float temperatureResistance;
+        [SerializeField] private float criticalMaxTemperature;
+        [SerializeField] private float criticalMinTemperature;
         [Min(0f)][SerializeField] private float criticalFallVelocity;
         [field: Min(0f)][field: SerializeField] public float BaseHealth { get; private set; }
         [field: SerializeField] public bool Invulnerable { get; private set; }
@@ -24,21 +29,25 @@ namespace Assets.Scripts.Entities
         [Range(0f, 1f)][SerializeField] private float damageFromLowHungerAmplifier;
         [Range(0f, 1f)][SerializeField] private float criticalHungerRate;
 
-        public List<Effect> Effects { get; private set; } = new List<Effect>();
+        public List<DamageEffect> Effects { get; private set; } = new List<DamageEffect>();
 
         public delegate void DamageHandler(ref float amount, DamageType type, Entity attacker);
 
         public event DamageHandler OnDamageTaken;
-        public event Action OnEffectAdded;
-        public event Action OnEffectRemoved;
+        public event Action<DamageEffect> OnEffectAdded;
+        public event Action<DamageEffect> OnEffectRemoved;
         public event Action OnDeath;
         public event Action OnHealthChanged;
         public event Action OnFoodChanged;
 
+        [field: SerializeField] public float Health { get; private set; }
         public float Blood { get; private set; }
-        public float Health { get; private set; }
         public float Food { get; private set; }
         public float Water { get; private set; }
+
+        private PhysicsPropertiesContrainer physicsData => GetComponent<PhysicsPropertiesContrainer>();
+        private float highTemperatureDamageFreqerency;
+        private float lowTemperatureDamageFreqerency;
 
         private void OnValidate()
         {
@@ -62,6 +71,20 @@ namespace Assets.Scripts.Entities
 
             StartCoroutine(StartHungerCycle());
         }
+        private void Update()
+        {
+            if (physicsData.Temperature > criticalMaxTemperature && Time.time >= highTemperatureDamageFreqerency)
+            {
+                highTemperatureDamageFreqerency = Time.time + criticalMaxTemperature / physicsData.Temperature;
+                TakeDamage(physicsData.Temperature, this, DamageType.Generic);
+            }
+            else if (physicsData.Temperature < criticalMinTemperature && Time.time >= lowTemperatureDamageFreqerency)
+            {
+                lowTemperatureDamageFreqerency = Time.time + criticalMaxTemperature / physicsData.Temperature;
+                TakeDamage(physicsData.Temperature, this, DamageType.Generic);
+            }
+        }
+
         public void TakeDamage(float amount, Entity attacker, DamageType type)
         {
             if ((DamageSensors.Contains(type) && !Invulnerable) || type == DamageType.Generic)
@@ -79,30 +102,29 @@ namespace Assets.Scripts.Entities
 
             OnFoodChanged?.Invoke();
         }
-        public void ApplyEffect(Effect effect)
+        public void ApplyEffect(DamageEffect effect)
         {
             if (!effect.isEnded)
             {
                 effect.OnEffectEnded += HandleEffectEnd;
                 Effects.Add(effect);
-                OnEffectAdded?.Invoke();
+                OnEffectAdded?.Invoke(effect);
             }
         }
         public void RemoveEffect(Type type)
         {
-            Effect findedEffect = Effects.Find(n => n.GetType() == type);
+            DamageEffect findedEffect = Effects.Find(n => n.GetType() == type);
 
             if (findedEffect != null)
             {
                 findedEffect.StopEffect();
                 Effects.Remove(findedEffect);
-                OnEffectRemoved?.Invoke();
+                OnEffectRemoved?.Invoke(findedEffect);
             }
         }
         public void Kill()
         {
             TakeDamage(Health, this, DamageType.Generic);
-            OnHealthChanged?.Invoke();
         }
         public void ToggleInvulnerability(bool state)
         {
@@ -111,20 +133,22 @@ namespace Assets.Scripts.Entities
 
         private void HandleEffectEnd(Effect effect)
         {
-            Effects.Remove(effect);
+            Effects.Remove(Effects.Find(n => n.GetType() == effect.GetType()));
         }
-        private IEnumerator CalculateBloodloss(float initialBloodloss)
+        private IEnumerator CalculateBloodloss(float damage)
         {
+            damage = Mathf.Abs(damage);
+
             float maxDuration = 10f;
             float minDuration = 1f;
-            float bloodlossFactor = Mathf.Clamp01(initialBloodloss / BaseHealth);
+            float bloodlossFactor = Mathf.Clamp01(damage / BaseHealth);
 
             float totalDuration = Mathf.Lerp(maxDuration, minDuration, bloodlossFactor);
 
-            float damagePerSecond = initialBloodloss / totalDuration;
+            float damagePerSecond = damage / totalDuration;
             float elapsedTime = 0f;
 
-            Health = Mathf.Clamp(Health - initialBloodloss / (Blood / BaseHealth), 0f, BaseHealth);
+            Health = Mathf.Clamp(Health - (damage / (Blood / BaseHealth) * Mathf.Clamp(physicsData.Temperature * (1f - temperatureResistance), 1f, float.MaxValue)), 0f, BaseHealth);
 
             while (elapsedTime < totalDuration)
             {
@@ -166,6 +190,7 @@ namespace Assets.Scripts.Entities
             }
         }
     }
+
     public enum DamageType : byte
     {
         Generic,
@@ -173,5 +198,12 @@ namespace Assets.Scripts.Entities
         Kenetic,
         Magic,
         Fire
+    }
+    public enum EntityType : byte
+    {
+        Player,
+        Default,
+        Nextbot,
+        Unmatched
     }
 }

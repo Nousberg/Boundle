@@ -1,4 +1,6 @@
-﻿using Mirror;
+﻿using Assets.Scripts.Entities.Abilities.Scriptables;
+using Assets.Scripts.Ui.Player;
+using Mirror;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -7,16 +9,13 @@ namespace Assets.Scripts.Entities.Abilities
 {
     public abstract class Ability : MonoBehaviour
     {
-        [SerializeField] private KeyCode KeyBind;
-        [SerializeField] private float Duration;
-        [SerializeField] private float Cooldown;
-        [SerializeField] private float DelayBeforeStart;
+        [SerializeField] private AbilityData data;
 
         private bool toggled;
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyBind))
+            if (Input.GetKeyDown(data.KeyBind) && !GameVisualManager.BlockedKeyboard)
             {
                 toggled = !toggled;
 
@@ -58,9 +57,9 @@ namespace Assets.Scripts.Entities.Abilities
 
         private IEnumerator AbilityActivator()
         {
-            yield return new WaitForSeconds(DelayBeforeStart);
+            yield return new WaitForSeconds(data.StartDelay);
             ToggleAbility();
-            yield return new WaitForSeconds(Duration);
+            yield return new WaitForSeconds(data.Duration);
             OnDeactivate();
         }
 

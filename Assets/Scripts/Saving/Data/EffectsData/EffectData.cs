@@ -2,10 +2,10 @@
 {
     public class EffectData
     {
+        public string type;
         public float duration;
         public float amplifier;
         public bool infinite;
-        public string type;
 
         public EffectData(float duration, float amplifier, bool infinite, string type)
         {

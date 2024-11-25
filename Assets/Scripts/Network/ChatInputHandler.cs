@@ -18,19 +18,19 @@ namespace Assets.Scripts.Network
         private CommandParser commandParser => GetComponent<CommandParser>();
         private GameObject currentMessage;
 
+        private void Start()
+        {
+            commandParser.OnSuccefulParse += HandleParserLog;
+            commandParser.OnFailureParse += HandleParserLog;
+        }
+
         public void HandleMessage(string text, string senderName, Entity sender = null)
         {
             if (!string.IsNullOrEmpty(text) && senderName != null)
                 if (text[0] != '/')
                 {
                     foreach (var content in disallowedContent)
-                        if (text.Contains(content))
-                        {
-                            int startIndex = text.IndexOf(content[0]);
-                            int endIndex = text.IndexOf(content[content.Length - 1]) - startIndex;
-
-                            text.Remove(startIndex, endIndex);
-                        }
+                        text = text.Replace(content, "#");
 
                     if (currentMessage != null)
                         Destroy(currentMessage);
@@ -39,10 +39,14 @@ namespace Assets.Scripts.Network
                     Message message = currentMessage.GetComponent<Message>();
 
                     if (message != null)
-                        message.Text.text = senderName + ": " + text;
+                    {
+                        message.MessageText.text = text;
+                        message.AuthorText.text = senderName + (senderName != string.Empty ? ": " : string.Empty);
+                    }
                 }
                 else if (sender != null)
                     commandParser.TryParse(text, sender);
         }
+        public void HandleParserLog(string log) => HandleMessage(log, string.Empty);
     }
 }

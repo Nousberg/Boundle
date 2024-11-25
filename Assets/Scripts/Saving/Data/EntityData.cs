@@ -10,9 +10,8 @@ namespace Assets.Scripts.Saving
         public bool invulnerable;
         public List<DamageType> damageSensors = new List<DamageType>();
         public List<EffectData> effects = new List<EffectData>();
-        public InventoryData inventory;
 
-        public EntityData(float currentHealth, float currentBlood, float baseHealth, bool invulnerable, List<DamageType> damageSensors, List<EffectData> effects, InventoryData inventory)
+        public EntityData(float currentHealth, float currentBlood, float baseHealth, bool invulnerable, List<DamageType> damageSensors, List<EffectData> effects)
         {
             this.currentBlood = currentBlood;
             this.currentHealth = currentHealth;
@@ -20,7 +19,6 @@ namespace Assets.Scripts.Saving
             this.baseHealth = baseHealth;
             this.invulnerable = invulnerable;
             this.damageSensors = damageSensors;
-            this.inventory = inventory;
         }
     }
 }

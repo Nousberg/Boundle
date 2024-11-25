@@ -35,8 +35,6 @@ namespace Assets.Scripts.Movement
             }
         }
 
-        public bool lockedDown;
-
         private Rigidbody rb => GetComponent<Rigidbody>();
         private CapsuleCollider coll => GetComponent<CapsuleCollider>();
         private TouchscreenJoystick joystick => GetComponent<TouchscreenJoystick>();
@@ -65,7 +63,7 @@ namespace Assets.Scripts.Movement
         {
             if (isFlying)
             {
-                if (!lockedDown && keyInput.sqrMagnitude > 0f)
+                if (keyInput.sqrMagnitude > 0f && !GameVisualManager.BlockedKeyboard)
                 {
                     ResetMovement();
                     Move();
@@ -87,7 +85,7 @@ namespace Assets.Scripts.Movement
             }
             else if (!isFlying && IsGrounded && keyInput.sqrMagnitude > 0f)
             {
-                if (!lockedDown)
+                if (!GameVisualManager.BlockedKeyboard)
                 {
                     ResetMovement();
                     Move();
@@ -100,7 +98,7 @@ namespace Assets.Scripts.Movement
                     moveVector = Vector3.zero;
             }
 
-            if (!lockedDown)
+            if (!GameVisualManager.BlockedKeyboard)
             {
                 CurrentVelocity = rb.velocity.magnitude;
 
@@ -114,7 +112,7 @@ namespace Assets.Scripts.Movement
         }
         private void Update()
         {
-            if (!lockedDown)
+            if (!GameVisualManager.BlockedKeyboard)
             {
                 keyInput = Application.platform == RuntimePlatform.Android && joystick.joystickInput.sqrMagnitude > 0f ? joystick.joystickInput : new Vector3(Input.GetAxis("Horizontal"), 0f, Input.GetAxis("Vertical"));
 

@@ -32,9 +32,6 @@ namespace Assets.Scripts
             }
             return false;
         }
-        public void CloseAllScenes()
-        {
-            Application.Quit();
-        }
+        public void CloseAllScenes() => Application.Quit();
     }
 }
