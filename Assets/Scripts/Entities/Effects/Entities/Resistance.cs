@@ -12,5 +12,9 @@ namespace Assets.Scripts.Entities.Effects
         {
             amount *= 100f / (100f + Amplifier);
         }
+        public override void CombineEffects(Effect effect)
+        {
+            Amplifier += effect.Amplifier;
+        }
     }
 }

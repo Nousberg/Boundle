@@ -9,7 +9,7 @@ namespace Assets.Scripts.Entities.Effects
         public readonly bool Infinite;
 
         public int Duration { get; private set; }
-        public float Amplifier { get; private set; }
+        public float Amplifier { get; protected set; }
         public bool isEnded { get; private set; }
 
         public event Action<Effect> OnEffectEnded;
@@ -47,6 +47,8 @@ namespace Assets.Scripts.Entities.Effects
             isEnded = true;
             OnEffectEnded?.Invoke(this);
         }
+
+        public abstract void CombineEffects(Effect effect);
 
         private async Task StartEffectLifeCycle(CancellationToken token)
         {

@@ -49,8 +49,6 @@ namespace Assets.Scripts.Movement
 
         private void Start()
         {
-            player.OnDamageTaken += CheckDamageConditions;
-
             collSize = coll.height;
             collCenter = coll.center;
 
@@ -92,7 +90,9 @@ namespace Assets.Scripts.Movement
 
                     moveVector = transform.TransformDirection(keyInput) *
                         (Input.GetKey(KeyCode.LeftShift) || joystick.CriticalDistance ? currentWalkSpeed * runSpeedBoost : currentWalkSpeed);
-                    rb.velocity = new Vector3(moveVector.x, rb.velocity.y, moveVector.z);
+                    moveVector.y = rb.velocity.y;
+
+                    rb.velocity = moveVector;
                 }
                 else
                     moveVector = Vector3.zero;
@@ -143,11 +143,6 @@ namespace Assets.Scripts.Movement
             runSpeedBoost = data.RunSpeedBoost;
             flySpeed = data.FlySpeed;
             jumpPower = data.JumpPower;
-        }
-        private void CheckDamageConditions(ref float amount, DamageType type, Entity initiator)
-        {
-            if (amount > player.BaseHealth * 0.4f)
-                ToggleFly(false);
         }
         public void ToggleFly(bool state)
         {

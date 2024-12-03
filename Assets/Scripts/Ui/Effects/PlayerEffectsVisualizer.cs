@@ -1,5 +1,6 @@
 using Assets.Scripts.Entities;
 using Assets.Scripts.Entities.Effects;
+using Assets.Scripts.Entities.Effects.Inventory;
 using Assets.Scripts.Inventory;
 using Assets.Scripts.Movement;
 using Assets.Scripts.Ui.Effects.Sciptables;
@@ -17,8 +18,14 @@ namespace Assets.Scripts.Ui.Effects
         [SerializeField] private InventoryDataController inventory;
         [SerializeField] private MovementController movement;
         [SerializeField] private Transform effectsParent;
+        [SerializeField] private Transform itemEffectsParent;
+
+        [Header("Properties")]
+        [Min(0)][SerializeField] private int maxVisualizedItemEffects;
+        [Min(0)][SerializeField] private int maxVisualizedEffects;
 
         private List<GameObject> effectObjects = new List<GameObject>();
+        private List<GameObject> itemEffectObjects = new List<GameObject>();
         private List<Effect> effectsOnObject = new List<Effect>();
 
         private void Start()
@@ -65,9 +72,18 @@ namespace Assets.Scripts.Ui.Effects
                 effectImage.sprite = effectsUiData.Find(n => n.name == effect.GetType().Name).Icon;
                 effectImage.preserveAspect = true;
 
-                effectObject.transform.SetParent(effectsParent, false);
-
-                effectObjects.Add(effectObject);
+                if (!(effect is ItemEffect) && effectObjects.Count <= maxVisualizedEffects)
+                {
+                    effectObject.transform.SetParent(effectsParent, false);
+                    effectObjects.Add(effectObject);
+                }
+                else if ((effect is ItemEffect) && itemEffectObjects.Count <= maxVisualizedItemEffects)
+                {
+                    effectObject.transform.SetParent(itemEffectsParent, false);
+                    itemEffectObjects.Add(effectObject);
+                }
+                else
+                    Destroy(effectObject);
             }
         }
     }

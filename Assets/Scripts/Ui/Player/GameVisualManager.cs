@@ -6,6 +6,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.UI;
+using static UnityEngine.Rendering.DebugUI;
 
 namespace Assets.Scripts.Ui.Player
 {
@@ -101,6 +102,8 @@ namespace Assets.Scripts.Ui.Player
             {
                 BlockedKeyboard = false;
 
+                ToggleCursor(false);
+
                 if (!isChatOpen)
                     ToggleSettings(!settingsEnabled);
 
@@ -109,7 +112,10 @@ namespace Assets.Scripts.Ui.Player
             else if (Input.GetKeyDown(chatOpenBind))
             {
                 if (!settingsEnabled)
+                {
                     ToggleChat(true);
+                    ToggleCursor(true);
+                }
             }
         }
 
@@ -124,6 +130,11 @@ namespace Assets.Scripts.Ui.Player
             chatBoxBackground.rectTransform.sizeDelta = targetSize;
         }
 
+        private void ToggleCursor(bool state)
+        {
+            Cursor.lockState = state ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = state;
+        }
         private void ToggleChat(bool value)
         {
             if (value)
@@ -132,8 +143,6 @@ namespace Assets.Scripts.Ui.Player
             isChatOpen = value;
             chatBox.SetActive(value);
             aim.gameObject.SetActive(!value);
-            Cursor.lockState = value ? CursorLockMode.None : CursorLockMode.Locked;
-            Cursor.visible = value;
         }
         private void ToggleSettings(bool value)
         {
@@ -143,8 +152,7 @@ namespace Assets.Scripts.Ui.Player
             settingsEnabled = value;
 
             BlockedKeyboard = value;
-            Cursor.lockState = !value ? CursorLockMode.Locked : CursorLockMode.None;
-            Cursor.visible = value;
+            ToggleCursor(value);
 
             StartSettingsAnimation();
         }

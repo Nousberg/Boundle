@@ -10,8 +10,11 @@ namespace Assets.Scripts.Entities.Effects
 
         public override void ModifyDamage(ref float amount, DamageType type, Entity attacker)
         {
-            if (type != DamageType.Generic)
-                attacker.TakeDamage(amount * Mathf.Clamp01(Amplifier / 100f), attacker, DamageType.Generic);
+            attacker.TakeDamage(amount * Mathf.Clamp01(Amplifier / 100f), attacker, DamageType.Generic);
+        }
+        public override void CombineEffects(Effect effect)
+        {
+            Amplifier += effect.Amplifier;
         }
     }
 }

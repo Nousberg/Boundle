@@ -8,6 +8,7 @@ namespace Assets.Scripts.Inventory
 {
     public class ItemDataController : MonoBehaviour
     {
+        [SerializeField] protected InventoryDataController inventory { get; private set; }
         [field: SerializeField] public BaseItemData Data { get; private set; }
 
         public event Action<ItemEffect> OnEffectAdded;
@@ -15,7 +16,7 @@ namespace Assets.Scripts.Inventory
 
         public DynamicItemData GetData => data;
 
-        protected DynamicItemData data;
+        public DynamicItemData data;
 
         public void InjectData(DynamicItemData data) => this.data = data;
 

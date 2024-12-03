@@ -1,4 +1,5 @@
 ﻿using Assets.Scripts.Entities;
+using Assets.Scripts.Entities.Effects.Inventory;
 using Assets.Scripts.Inventory.Scriptables;
 using System;
 using UnityEngine;
@@ -57,6 +58,7 @@ namespace Assets.Scripts.Inventory
         }
         private void ThrowDamage(DynamicItemData data, BaseWeaponData weaponData)
         {
+            ApplyEffect(new Supression(inventory, 1, 67f, true));
             float damage = weaponData.Damage;
             OnFire?.Invoke(ref damage);
 
