@@ -1,5 +1,4 @@
-﻿using Assets.Scripts.Inventory.Scriptables;
-using System.Collections;
+﻿using Assets.Scripts.Inventory.DynamicData;
 using UnityEngine;
 
 namespace Assets.Scripts.Inventory

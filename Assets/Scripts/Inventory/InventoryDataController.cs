@@ -1,3 +1,5 @@
+using Assets.Scripts.Effects;
+using Assets.Scripts.Inventory.DynamicData;
 using Assets.Scripts.Inventory.Scriptables;
 using System;
 using System.Collections.Generic;
@@ -8,6 +10,7 @@ namespace Assets.Scripts.Inventory
 {
     public class InventoryDataController : MonoBehaviour
     {
+        public EffectContainer c;
         [field: SerializeField] public List<ItemDataController> AllInGameItems { get; private set; } = new List<ItemDataController>();
         [field: SerializeField] public List<ItemDataController> DefaultItems { get; private set; } = new List<ItemDataController>();
         [field: Min(0f)][field: SerializeField] public float MaxInventoryWeight { get; private set; }
@@ -26,16 +29,22 @@ namespace Assets.Scripts.Inventory
         private void Start()
         {
             foreach (var item in DefaultItems)
-                aviableItems.Add(new DynamicItemData(item.Data));
+            {
+                if (!(item.BaseData is BaseWeaponData))
+                    aviableItems.Add(new DynamicItemData(item.BaseData));
+                else if (item.BaseData is BaseWeaponData data)
+                    aviableItems.Add(new DynamicWeaponData(data, data.BaseAmmo, data.BaseAmmo, 0f));
+            }
 
             OnItemAdded?.Invoke();
         }
+
         public void SwitchItem(int index)
         {
             if (index < 0 || index >= aviableItems.Count)
                 return;
 
-            AllInGameItems.Find(n => n.Data.Id == aviableItems[index].data.Id).InjectData(aviableItems[index]);
+            AllInGameItems.Find(n => n.BaseData.Id == aviableItems[index].data.Id).InjectData(aviableItems[index]);
 
             CurrentItemIndex = index;
             OnItemSwitched?.Invoke();

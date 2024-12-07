@@ -1,6 +1,6 @@
-using Assets.Scripts.Entities.Effects;
-using Assets.Scripts.Entities.Interfaces;
+using Assets.Scripts.Core.Interfaces;
 using Assets.Scripts.Entities.Liquids;
+using Assets.Scripts.Core.Environment;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -18,6 +18,7 @@ namespace Assets.Scripts.Entities
 
         [Header("Temperature")]
         [Range(0f, 1f)][SerializeField] private float temperatureResistance;
+        [SerializeField] private float normalTemperature;
         [SerializeField] private float criticalMaxTemperature;
         [SerializeField] private float criticalMinTemperature;
 
@@ -25,12 +26,12 @@ namespace Assets.Scripts.Entities
         [SerializeField] private float criticalMaxLiquidAmount;
         [SerializeField] private float criticalMinLiquidAmount;
 
-        [Header("Harmful Liquid Properties")]
-        [SerializeField] private float acidDamageFrequerency;
+        [Header("Liquid Harm Properties")]
+        [SerializeField] private float liquidDamageFrequency;
 
-        [Header("Blood properties")]
+        [Header("Blood Properties")]
         [Range(0f, 1f)][SerializeField] private float maxBloodlossPercentage;
-        [Min(0f)][SerializeField] private float defaultBloodlossDuration;
+        [Min(0f)][SerializeField] private float maxBloodlossDuration;
         [SerializeField] private float normalBloodAmount;
 
         [Header("Regeneration")]
@@ -42,77 +43,69 @@ namespace Assets.Scripts.Entities
         [field: SerializeField] public bool Invulnerable { get; private set; }
         [field: SerializeField] public List<DamageType> DamageSensors { get; private set; } = new List<DamageType>();
 
-        [field: Header("Food")]
-        [field: Min(0f)][field: SerializeField] public float BaseFood { get; private set; }
-        [Range(0f, 1f)][SerializeField] private float hungerDecreaseRate;
-        [Range(0f, 1f)][SerializeField] private float waterDecreaseRate;
-        [Range(0f, 1f)][SerializeField] private float damageFromLowHungerAmplifier;
-        [Range(0f, 1f)][SerializeField] private float criticalHungerRate;
-
-        public List<DamageEffect> Effects { get; private set; } = new List<DamageEffect>();
-
         public delegate void DamageHandler(ref float amount, DamageType type, Entity attacker);
 
         public event DamageHandler OnDamageTakenForEffects;
-        public event Action<DamageEffect> OnEffectAdded;
-        public event Action<DamageEffect> OnEffectRemoved;
-        public event Action OnDeath;
         public event Action<float> OnDamageTaken;
+        public event Action OnDeath;
         public event Action OnHealthChanged;
-        public event Action OnFoodChanged;
 
         [field: SerializeField] public float Health { get; private set; }
-        public float Food { get; private set; }
-        public float Water { get; private set; }
 
         private PhysicsPropertiesContainer physicsData => GetComponent<PhysicsPropertiesContainer>();
         private LiquidContainer liquids => GetComponent<LiquidContainer>();
 
         private Liquid bloodRef;
-        private float nextAcidDamage;
-        private float nextBloodRegen;
+        private float nextLiqudDamage;
+        private float nextRegen;
         private float currentRegenAmount;
         private float nextTemperatureDamage;
 
-        private void OnCollisionEnter(Collision collision)
-        {
-            float velocity = collision.relativeVelocity.magnitude;
-            if (velocity >= criticalFallVelocity)
-                TakeDamage(velocity, this, DamageType.Gravity);
-        }
         private void Start()
         {
-            Food = BaseFood;
-            Water = BaseFood;
             Health = BaseHealth;
 
+            liquids.OnLiquidsChanged += GetBloodRef;
             liquids.TryInject(LiquidContainer.LiquidType.Blood, normalBloodAmount);
-            liquids.OnLiquidsChanged += GetBlood;
-
-            GetBlood();
-            StartCoroutine(StartHungerCycle());
         }
         private void Update()
         {
+            physicsData.CombineTemperature(normalTemperature);
+
+            if (Dead())
+                return;
+
             HandleRegeneration();
             HandleTemperatureDamage();
             HandleLiquids();
         }
-        private void GetBlood()
+        private void OnValidate()
+        {
+            criticalMaxTemperature = Mathf.Clamp(criticalMaxTemperature, criticalMinTemperature, float.PositiveInfinity);
+            criticalMinTemperature = Mathf.Clamp(criticalMinTemperature, float.NegativeInfinity, criticalMaxTemperature);
+            normalTemperature = Mathf.Clamp(normalTemperature, criticalMinTemperature, criticalMaxTemperature);
+        }
+        private void OnCollisionEnter(Collision collision)
+        {
+            float velocity = collision.relativeVelocity.magnitude;
+
+            if (velocity >= criticalFallVelocity)
+                TakeDamage(velocity, this, DamageType.Gravity);
+        }
+        private void GetBloodRef()
         {
             bloodRef = liquids.GetLiquids.Find(n => n.type == LiquidContainer.LiquidType.Blood);
         }
         private void HandleRegeneration()
         {
-            if (Time.time >= nextBloodRegen)
+            if (Time.time >= nextRegen)
             {
                 if (bloodRef != null)
                 {
-                    nextBloodRegen = Time.time + 10f / regenerationRate;
+                    nextRegen = Time.time + 10f / regenerationRate;
                     currentRegenAmount = Health / BaseHealth;
 
-                    liquids.TrySetLiquidAmount(liquids.GetLiquids.IndexOf(bloodRef), Mathf.Lerp(bloodRef.amount, normalBloodAmount, Mathf.Clamp(currentRegenAmount * Time.deltaTime, 0f, maxRegenAmount)));
-                    Health = Mathf.Lerp(Health, BaseHealth, Mathf.Clamp(Mathf.Min(normalBloodAmount, bloodRef.amount) / Mathf.Max(normalBloodAmount, bloodRef.amount) * Time.deltaTime, 0f, maxRegenAmount));
+                    Heal(BaseHealth * currentRegenAmount * Mathf.Clamp(Mathf.Min(normalBloodAmount, bloodRef.amount) / Mathf.Max(normalBloodAmount, bloodRef.amount), 0f, maxRegenAmount));
 
                     OnHealthChanged?.Invoke();
                 }
@@ -125,68 +118,87 @@ namespace Assets.Scripts.Entities
             if (physicsData.Temperature > criticalMaxTemperature && Time.time >= nextTemperatureDamage)
             {
                 nextTemperatureDamage = Time.time + criticalMaxTemperature / physicsData.Temperature;
-                TakeDamage(physicsData.Temperature, this, DamageType.Temperature);
+                TakeDamage((physicsData.Temperature - criticalMaxTemperature) * (1f - temperatureResistance), this, DamageType.Magic);
             }
             else if (physicsData.Temperature < criticalMinTemperature && Time.time >= nextTemperatureDamage)
             {
                 nextTemperatureDamage = Time.time + physicsData.Temperature / criticalMinTemperature;
-                TakeDamage(physicsData.Temperature, this, DamageType.Temperature);
+                TakeDamage((criticalMinTemperature - physicsData.Temperature) * (1f - temperatureResistance), this, DamageType.Magic);
             }
         }
         private void HandleLiquids()
         {
             foreach (var liquid in liquids.GetLiquids)
             {
-                if (liquid.type == LiquidContainer.LiquidType.Acid && Time.time >= nextAcidDamage)
+                if (Time.time >= nextLiqudDamage)
                 {
-                    nextAcidDamage = Time.time + 10f / acidDamageFrequerency;
-                    TakeDamage(liquid.amount / Mathf.Clamp(liquids.Capacity / liquid.amount, 1f, float.PositiveInfinity), this, DamageType.Generic);
+                    nextLiqudDamage = Time.time + 10f / liquidDamageFrequency;
+
+                    switch (liquid.type)
+                    {
+                        case LiquidContainer.LiquidType.Acid:
+                            TakeDamage(liquid.amount / Mathf.Clamp(bloodRef.amount / liquid.amount, 1f, float.PositiveInfinity), this, DamageType.Magic);
+                            break;
+                    }
                 }
             }
         }
-        private IEnumerator ApplyBloodloss(float damage)
+        private bool Dead()
         {
-            OnDamageTaken?.Invoke(damage);
-
-            if (bloodRef == null || Health == 0f)
+            if (Health <= 0f || bloodRef == null)
             {
                 OnDeath?.Invoke();
                 OnHealthChanged?.Invoke();
-                yield break;
+                return true;
             }
+            return false;
+        }
+        private IEnumerator ApplyBloodloss(float damage)
+        {
+            if (Dead())
+                yield break;
 
             float dividedDamage = damage / 2f;
-            float initialDamage = dividedDamage / Mathf.Clamp(Mathf.Min(physicsData.Temperature, physicsData.BaseTemperature) / Mathf.Max(physicsData.Temperature, physicsData.BaseTemperature) / (1f - temperatureResistance), 0.6f, 1f) / Mathf.Clamp(Mathf.Min(normalBloodAmount, bloodRef.amount) / Mathf.Max(normalBloodAmount, bloodRef.amount), 0.25f, 1f);
 
-            Health = Mathf.Clamp(Health - initialDamage, 0f, BaseHealth);
+            float clampedDamageInfluenceFactors = Mathf.Clamp(
+                Mathf.Min(physicsData.Temperature, normalTemperature) / 
+                Mathf.Max(physicsData.Temperature, normalTemperature)
+                
+                * 
 
-            float damageAspect = damage / BaseHealth;
-            float bloodlossDuration = defaultBloodlossDuration * damageAspect;
-            float bloodloss = dividedDamage * Mathf.Clamp(bloodlossDuration / defaultBloodlossDuration, 0.1f, float.PositiveInfinity);
+                (Mathf.Min(bloodRef.amount, normalBloodAmount) / 
+                Mathf.Max(bloodRef.amount, normalBloodAmount)), 0.1f, 1f);
 
-            float elapsedBloodlossDuration = 0f;
-            float currentBloodloss = 0f;
+            Health = Mathf.Max(Health - dividedDamage / clampedDamageInfluenceFactors, 0f);
 
-            while (elapsedBloodlossDuration < bloodlossDuration)
+            float bloodloss = dividedDamage / BaseHealth;
+            float clampedBloodloss = Mathf.Min(bloodloss, 1f);
+            float duration = maxBloodlossDuration * clampedBloodloss;
+            float elapsedTime = 0f;
+
+            currentRegenAmount = currentRegenAmount * (1f - clampedBloodloss);
+
+            while (duration > elapsedTime)
             {
-                elapsedBloodlossDuration += Time.deltaTime;
-                currentBloodloss = bloodloss * (1f - elapsedBloodlossDuration / bloodlossDuration) * Time.deltaTime;
-
-                liquids.TryPumpout(LiquidContainer.LiquidType.Blood, currentBloodloss);
-                Health = Mathf.Clamp(Health - BaseHealth * (currentBloodloss / bloodRef.amount) * Time.deltaTime, 0f, BaseHealth);
-
-                if (bloodRef == null || Health == 0f)
-                {
-                    OnDeath?.Invoke();
-                    OnHealthChanged?.Invoke();
+                if (Dead())
                     yield break;
-                }
 
-                OnHealthChanged?.Invoke();
+                elapsedTime += Time.deltaTime;
+
+                float timeFactor = Mathf.Min(bloodloss, maxBloodlossPercentage) * (1f - elapsedTime / duration) * Time.deltaTime;
+
+                Health = Mathf.Max(Health - BaseHealth * timeFactor, 0f);
+                liquids.TryPumpout(LiquidContainer.LiquidType.Blood, normalBloodAmount * timeFactor);
+
                 yield return null;
             }
         }
 
+        public void Heal(float amount)
+        {
+            Health = Mathf.Clamp(Health + amount, 0f, BaseHealth);
+            liquids.TrySetLiquidAmount(liquids.GetLiquids.IndexOf(bloodRef), Mathf.Lerp(bloodRef.amount, normalBloodAmount, Mathf.Clamp(Health / BaseHealth, 0f, maxRegenAmount)));
+        }
         public void TakeDamage(float amount, Entity attacker, DamageType type)
         {
             if ((DamageSensors.Contains(type) && !Invulnerable) || type == DamageType.Generic)
@@ -194,83 +206,20 @@ namespace Assets.Scripts.Entities
                 if (type != DamageType.Generic)
                     OnDamageTakenForEffects?.Invoke(ref amount, type, attacker);
 
+                OnDamageTaken?.Invoke(amount);
                 StartCoroutine(ApplyBloodloss(amount));
-            }
-        }
-        public void RestoreFood(float foodAmount, float waterAmount = 0f)
-        {
-            Food = Mathf.Clamp(Food + foodAmount, Food, BaseFood);
-
-            if (waterAmount > 0f)
-                Water = Mathf.Clamp(Water + waterAmount, Water, BaseFood);
-
-            OnFoodChanged?.Invoke();
-        }
-        public void ApplyEffect(DamageEffect effect)
-        {
-            Effect findedEffect = Effects.Find(n => n.GetType() == effect.GetType());
-
-            if (!effect.isEnded)
-            {
-                if (findedEffect != null)
-                    findedEffect.CombineEffects(effect);
-                else
-                {
-                    effect.OnEffectEnded += HandleEffectEnd;
-                    Effects.Add(effect);
-                    OnEffectAdded?.Invoke(effect);
-                }
-            }
-        }
-        public void RemoveEffect(Type type)
-        {
-            DamageEffect findedEffect = Effects.Find(n => n.GetType() == type);
-
-            if (findedEffect != null)
-            {
-                findedEffect.StopEffect();
-                Effects.Remove(findedEffect);
-                OnEffectRemoved?.Invoke(findedEffect);
             }
         }
         public void Kill()
         {
             TakeDamage(Health, this, DamageType.Generic);
         }
-        public void ToggleInvulnerability(bool state)
-        {
-            Invulnerable = state;
-        }
-
-        private void HandleEffectEnd(Effect effect)
-        {
-            Effects.Remove(Effects.Find(n => n.GetType() == effect.GetType()));
-        }
-        private IEnumerator StartHungerCycle()
-        {
-            while (true)
-            {
-                yield return new WaitForSeconds(1f / Mathf.Max(Food / BaseFood, 0.15f));
-
-                if (Water > 0 || Food > 0)
-                    OnFoodChanged?.Invoke();
-
-                if (Food > 0f)
-                    Food -= BaseFood * hungerDecreaseRate;
-
-                if (Water > 0f)
-                    Water -= BaseFood * waterDecreaseRate;
-
-                if (Food < BaseFood * criticalHungerRate)
-                    TakeDamage(Health * (1f - Food / BaseFood) * damageFromLowHungerAmplifier, this, DamageType.Generic);
-            }
-        }
+        public void ToggleInvulnerability(bool state) => Invulnerable = state;
     }
 
     public enum DamageType : byte
     {
         Generic,
-        Temperature,
         Gravity,
         Kenetic,
         Magic,

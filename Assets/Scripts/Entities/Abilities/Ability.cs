@@ -1,9 +1,7 @@
 ﻿using Assets.Scripts.Entities.Abilities.Scriptables;
 using Assets.Scripts.Ui.Player;
-using Mirror;
 using System.Collections;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace Assets.Scripts.Entities.Abilities
 {
@@ -31,28 +29,14 @@ namespace Assets.Scripts.Entities.Abilities
 
         public void Activate()
         {
-            if (!toggled)
-            {
-                toggled = true;
-                StartCoroutine(nameof(AbilityActivator));
-            }
-            else
-            {
-                Deactivate();
-            }
+            toggled = true;
+            StartCoroutine(nameof(AbilityActivator));
         }
         public void Deactivate()
         {
-            if (toggled)
-            {
-                toggled = false;
-                StopCoroutine(nameof(AbilityActivator));
-                OnDeactivate();
-            }
-            else
-            {
-                Activate();
-            }
+            toggled = false;
+            StopCoroutine(nameof(AbilityActivator));
+            OnDeactivate();
         }
 
         private IEnumerator AbilityActivator()

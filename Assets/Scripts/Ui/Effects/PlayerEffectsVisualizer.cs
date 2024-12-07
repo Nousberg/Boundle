@@ -1,8 +1,5 @@
-using Assets.Scripts.Entities;
-using Assets.Scripts.Entities.Effects;
-using Assets.Scripts.Entities.Effects.Inventory;
+using Assets.Scripts.Effects;
 using Assets.Scripts.Inventory;
-using Assets.Scripts.Movement;
 using Assets.Scripts.Ui.Effects.Sciptables;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,13 +7,12 @@ using UnityEngine.UI;
 
 namespace Assets.Scripts.Ui.Effects
 {
+    [RequireComponent(typeof(EffectContainer))]
     public class PlayerEffectsVisualizer : MonoBehaviour
     {
         [Header("References")]
         [SerializeField] private List<EffectUiData> effectsUiData = new List<EffectUiData>();
-        [SerializeField] private Entity player;
         [SerializeField] private InventoryDataController inventory;
-        [SerializeField] private MovementController movement;
         [SerializeField] private Transform effectsParent;
         [SerializeField] private Transform itemEffectsParent;
 
@@ -24,19 +20,18 @@ namespace Assets.Scripts.Ui.Effects
         [Min(0)][SerializeField] private int maxVisualizedItemEffects;
         [Min(0)][SerializeField] private int maxVisualizedEffects;
 
+        private EffectContainer effectContainer => GetComponent<EffectContainer>();
+
         private List<GameObject> effectObjects = new List<GameObject>();
         private List<GameObject> itemEffectObjects = new List<GameObject>();
         private List<Effect> effectsOnObject = new List<Effect>();
 
         private void Start()
         {
-            player.OnEffectAdded += AddEffect;
-            player.OnEffectRemoved += RemoveEffect;
+            effectContainer.OnEffectAdded += AddEffect;
+            effectContainer.OnEffectRemoved += RemoveEffect;
 
-            movement.OnEffectAdded += AddEffect;
-            movement.OnEffectRemoved += RemoveEffect;
-
-            inventory.OnItemAdded += HandleInventoryChange;
+            inventory.OnItemSwitched += HandleInventoryChange;
             inventory.OnItemAdded += HandleInventoryChange;
             inventory.OnItemRemoved += HandleInventoryChange;
         }
@@ -54,6 +49,9 @@ namespace Assets.Scripts.Ui.Effects
         {
             foreach (var item in inventory.AllInGameItems)
             {
+                item.OnEffectAdded -= AddEffect;
+                item.OnEffectRemoved -= RemoveEffect;
+
                 item.OnEffectAdded += AddEffect;
                 item.OnEffectRemoved += RemoveEffect;
             }

@@ -1,4 +1,4 @@
-﻿using Assets.Scripts.Ui.Player;
+﻿using Assets.Scripts.Inventory.DynamicData;
 using UnityEngine;
 
 namespace Assets.Scripts.Inventory.View
@@ -35,7 +35,7 @@ namespace Assets.Scripts.Inventory.View
 
                 inventory.SwitchItem(targetIndex);
             }
-            if (Input.GetKeyDown(equipBind) && !GameVisualManager.BlockedKeyboard)
+            if (Input.GetKeyDown(equipBind))
             {
                 RaycastHit hit;
                 if (Physics.Raycast(holdPos.position, holdPos.forward, out hit, holdDist))
@@ -46,7 +46,7 @@ namespace Assets.Scripts.Inventory.View
                         inventory.TryAddItem(item.Data);
                 }
             }
-            if (Input.GetKeyDown(dropBind) && !GameVisualManager.BlockedKeyboard)
+            if (Input.GetKeyDown(dropBind))
             {
                 DynamicItemData data = inventory.GetItems[inventory.CurrentItemIndex];
 
@@ -60,7 +60,7 @@ namespace Assets.Scripts.Inventory.View
                 item.gameObject.SetActive(false);
 
             inventory.AllInGameItems
-                .Find(n => n.Data.Id == inventory.GetItems[inventory.CurrentItemIndex].data.Id)
+                .Find(n => n.BaseData.Id == inventory.GetItems[inventory.CurrentItemIndex].data.Id)
                 .gameObject.SetActive(true);
         }
     }

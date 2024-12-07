@@ -1,12 +1,12 @@
 ﻿using Assets.Scripts.Entities;
-using Mirror.BouncyCastle.Bcpg.Sig;
-using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Assets
 {
+    //this is a test component
+
     [RequireComponent(typeof(Entity))]
     public class HealthLine : MonoBehaviour
     {

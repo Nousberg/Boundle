@@ -80,10 +80,10 @@ namespace Assets.Scripts.Entities.Liquids
             if (liquidIndex < 0 || liquidIndex >= liquids.Count || Weight - liquids[liquidIndex].amount + amount > Capacity)
                 return false;
 
+            liquids[liquidIndex].amount = amount;
+
             if (amount <= 0f)
                 liquids.RemoveAt(liquidIndex);
-
-            liquids[liquidIndex].amount = amount;
 
             OnLiquidsChanged?.Invoke();
             return true;

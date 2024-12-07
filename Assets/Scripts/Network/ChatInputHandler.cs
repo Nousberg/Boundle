@@ -1,5 +1,4 @@
-﻿using Assets.Scripts.Entities;
-using Assets.Scripts.Ui.Chat;
+﻿using Assets.Scripts.Ui.Chat;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -20,11 +19,11 @@ namespace Assets.Scripts.Network
 
         private void Start()
         {
-            commandParser.OnSuccefulParse += HandleParserLog;
+            commandParser.OnSuccessfulParse += HandleParserLog;
             commandParser.OnFailureParse += HandleParserLog;
         }
 
-        public void HandleMessage(string text, string senderName, Entity sender = null)
+        public void HandleMessage(string text, string senderName, GameObject sender = null)
         {
             if (!string.IsNullOrEmpty(text) && senderName != null)
                 if (text[0] != '/')
@@ -45,8 +44,9 @@ namespace Assets.Scripts.Network
                     }
                 }
                 else if (sender != null)
-                    commandParser.TryParse(text, sender);
+                    if (!commandParser.TryParse(text, sender))
+                        HandleMessage(text, senderName, sender);
         }
-        public void HandleParserLog(string log) => HandleMessage(log, string.Empty);
+        private void HandleParserLog(string log) => HandleMessage(log, string.Empty);
     }
 }

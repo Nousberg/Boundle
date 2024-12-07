@@ -1,23 +1,16 @@
-﻿using Assets.Scripts.Entities;
-using Assets.Scripts.Network;
-using System.Collections;
-using TMPro;
+﻿using Assets.Scripts.Network;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Assets.Scripts.Ui.Chat
 {
-    [RequireComponent(typeof(Entity))]
+    [RequireComponent(typeof(ChatInputHandler))]
     public class ChatInteractProvider : MonoBehaviour
     {
         [Header("References")]
-        [SerializeField] private ChatInputHandler chat;
+        [SerializeField] private GameObject player;
 
-        private Entity player => GetComponent<Entity>();
+        private ChatInputHandler chat => GetComponent<ChatInputHandler>();
 
-        public void Send(string message)
-        {
-            chat.HandleMessage(message, "me", player);
-        }
+        public void Send(string message) => chat.HandleMessage(message, "me", player);
     }
 }

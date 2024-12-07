@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Assets.Scripts.Entities.Abilities
 {
-    [RequireComponent(typeof(PlayerMovementLogic), typeof(Entity))]
+    [RequireComponent(typeof(MovementController), typeof(Entity))]
     public class FlyAbility : Ability
     {
         [Header("Properties")]
@@ -12,7 +12,7 @@ namespace Assets.Scripts.Entities.Abilities
         private bool usable = true;
 
         private Entity player => GetComponent<Entity>();
-        private PlayerMovementLogic playerMovement => GetComponent<PlayerMovementLogic>();
+        private MovementController playerMovement => GetComponent<MovementController>();
 
         private void Start() => player.OnDamageTaken += CheckDamageConditions;
 

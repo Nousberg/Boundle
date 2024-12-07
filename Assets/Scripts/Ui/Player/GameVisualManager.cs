@@ -6,14 +6,13 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.UI;
-using static UnityEngine.Rendering.DebugUI;
 
 namespace Assets.Scripts.Ui.Player
 {
-    [RequireComponent(typeof(Entity))]
-    [RequireComponent(typeof(PlayerMovementLogic))]
     public class GameVisualManager : MonoBehaviour
     {
+        [SerializeField] private GameObject playerObj;
+
         [Header("References")]
         [SerializeField] private GridLayoutGroup aim;
         [SerializeField] private GameObject settingsUi;
@@ -50,9 +49,9 @@ namespace Assets.Scripts.Ui.Player
 
         public static bool BlockedKeyboard { get; private set; }
 
-        private PlayerMovementLogic playerMovement => GetComponent<PlayerMovementLogic>();
         private RectTransform settingsRect => settingsUi.GetComponent<RectTransform>();
-        private Entity player => GetComponent<Entity>();
+        private PlayerMovementLogic playerMovement;
+        private Entity player;
 
         private float targetTransperency;
         private float targetSinFrequerency;
@@ -65,6 +64,9 @@ namespace Assets.Scripts.Ui.Player
 
         private void Start()
         {
+            player = playerObj.GetComponent<Entity>();
+            playerMovement = playerObj.GetComponent<PlayerMovementLogic>();
+
             player.OnHealthChanged += UpdateHealthUI;
 
             startSpacing = aim.spacing;

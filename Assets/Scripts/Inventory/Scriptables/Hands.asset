@@ -19,11 +19,11 @@ MonoBehaviour:
   <Icon>k__BackingField: {fileID: 21300000, guid: 2e2101888c105b84fbd9117241fefd54,
     type: 3}
   <MyType>k__BackingField: 0
-  <DamageType>k__BackingField: 2
-  <Damage>k__BackingField: 32
+  <DamageType>k__BackingField: 3
+  <Damage>k__BackingField: 1
   <Spread>k__BackingField: 0
   <Recoil>k__BackingField: 0
-  <FireRate>k__BackingField: 2
+  <FireRate>k__BackingField: Infinity
   <ReloadDuration>k__BackingField: 0
   <Range>k__BackingField: 322
   <CriticalOverheat>k__BackingField: 0

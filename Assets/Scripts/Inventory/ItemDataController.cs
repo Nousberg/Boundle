@@ -1,37 +1,44 @@
-﻿using Assets.Scripts.Entities.Effects;
-using Assets.Scripts.Inventory.Scriptables;
+﻿using Assets.Scripts.Inventory.Scriptables;
+using Assets.Scripts.Inventory.DynamicData;
 using System;
 using UnityEngine;
-using Assets.Scripts.Entities.Effects.Inventory;
+using Assets.Scripts.Effects;
 
 namespace Assets.Scripts.Inventory
 {
     public class ItemDataController : MonoBehaviour
     {
         [SerializeField] protected InventoryDataController inventory { get; private set; }
-        [field: SerializeField] public BaseItemData Data { get; private set; }
+        [field: SerializeField] public BaseItemData BaseData { get; private set; }
 
-        public event Action<ItemEffect> OnEffectAdded;
-        public event Action<ItemEffect> OnEffectRemoved;
+        public event Action<Effect> OnEffectAdded;
+        public event Action<Effect> OnEffectRemoved;
 
         public DynamicItemData GetData => data;
 
-        public DynamicItemData data;
+        protected DynamicItemData data;
 
         public void InjectData(DynamicItemData data) => this.data = data;
 
-        public void ApplyEffect(ItemEffect effect)
+        public void ApplyEffect(Effect effect)
         {
+            Effect findedEffect = data.effects.Find(n => n.GetType() == effect.GetType());
+
             if (!effect.isEnded)
             {
-                effect.OnEffectEnded += HandleEffectEnd;
-                data.effects.Add(effect);
-                OnEffectAdded?.Invoke(effect);
+                if (findedEffect != null)
+                    findedEffect.CombineEffects(effect);
+                else
+                {
+                    effect.OnEffectEnded += HandleEffectEnd;
+                    data.effects.Add(effect);
+                    OnEffectAdded?.Invoke(effect);
+                }
             }
         }
         public void RemoveEffect(Type type)
         {
-            ItemEffect findedEffect = data.effects.Find(n => n.GetType() == type);
+            Effect findedEffect = data.effects.Find(n => n.GetType() == type);
 
             if (findedEffect != null)
             {
