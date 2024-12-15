@@ -15,19 +15,18 @@ namespace Assets.Scripts.Ui.Player
 
         [Header("References")]
         [SerializeField] private GridLayoutGroup aim;
-        [SerializeField] private GameObject settingsUi;
         [SerializeField] private Image healthImage;
         [SerializeField] private Volume postProcessing;
         [SerializeField] private TextMeshProUGUI chatBoxText;
         [SerializeField] private Image chatBoxBackground;
         [SerializeField] private GameObject chatBox;
         [SerializeField] private GameObject mobileUiElements;
-        [SerializeField] private TextMeshProUGUI[] mainUiTexts;
-        [SerializeField] private Image[] mainUiImages;
-        [SerializeField] private Image[] aimParts;
+        [SerializeField] private CanvasGroup mainUiGroup;
+        [SerializeField] private CanvasGroup settingsUiGroup;
+        [SerializeField] private CanvasGroup aimUiGroup;
 
         [Header("Properties")]
-        [SerializeField] private Color defaultAimColor;
+        [SerializeField] private float defaultAimTransperency;
         [SerializeField] private float transperencySinAmplitude;
         [SerializeField] private float transperencySinFrequerency;
         [SerializeField] private float firstStageTransperencyLerp;
@@ -49,10 +48,12 @@ namespace Assets.Scripts.Ui.Player
 
         public static bool BlockedKeyboard { get; private set; }
 
-        private RectTransform settingsRect => settingsUi.GetComponent<RectTransform>();
+        private RectTransform settingsRect => settingsUiGroup.GetComponent<RectTransform>();
         private PlayerMovementLogic playerMovement;
         private Entity player;
 
+        private float defaultMainUiAlpha;
+        private float defaultSettingsUiAplha;
         private float targetTransperency;
         private float targetSinFrequerency;
         private bool canUpdateBloodScreen = true;
@@ -64,6 +65,9 @@ namespace Assets.Scripts.Ui.Player
 
         private void Start()
         {
+            defaultMainUiAlpha = mainUiGroup.alpha;
+            defaultSettingsUiAplha = settingsUiGroup.alpha;
+
             player = playerObj.GetComponent<Entity>();
             playerMovement = playerObj.GetComponent<PlayerMovementLogic>();
 
@@ -82,12 +86,9 @@ namespace Assets.Scripts.Ui.Player
         private void Update()
         {
             float velocity = Mathf.Clamp(playerMovement.CurrentVelocity * 0.25f, 1f, 6f);
-            foreach (var part in aimParts)
-            {
-                Color targetColor = defaultAimColor;
-                targetColor.a /= velocity;
-                part.color = Color.Lerp(part.color, targetColor, aimLerpSpeed * Time.deltaTime);
-            }
+
+            aimUiGroup.alpha = Mathf.Lerp(aimUiGroup.alpha, defaultAimTransperency / velocity, aimLerpSpeed * Time.deltaTime);
+
             aim.spacing = Vector2.Lerp(
                 aim.spacing,
                 startSpacing + startSpacing * playerMovement.CurrentVelocity,
@@ -164,86 +165,51 @@ namespace Assets.Scripts.Ui.Player
 
             if (!settingsEnabled)
             {
-                foreach (var element in mainUiImages)
-                {
-                    Color targetColor = element.color;
-                    element.color = Color.clear;
+                mainUiGroup.gameObject.SetActive(true);
 
-                    canUpdateBloodScreen = false;
+                Sequence sequence = DOTween.Sequence();
 
-                    element.gameObject.SetActive(true);
+                sequence.Append(
+                    mainUiGroup.DOFade(defaultMainUiAlpha, closeDuration));
 
-                    element.DOColor(targetColor, closeDuration)
-                    .SetUpdate(UpdateType.Normal, true)
-                    .SetEase(closeEase)
-                    .OnComplete(() =>
-                    {
-                        canUpdateBloodScreen = true;
-                    });
-                }
-                foreach (var element in mainUiTexts)
-                {
-                    Color targetColor = element.color;
-                    element.color = Color.clear;
+                sequence.Join(
+                    settingsUiGroup.DOFade(0f, closeDuration));
 
-                    canUpdateBloodScreen = false;
+                sequence.Join(
+                    settingsRect.DOScale(Vector2.one * closedStateScaleOffset, closeDuration));
 
-                    element.gameObject.SetActive(true);
+                sequence.Join(
+                    settingsRect.DOMove(screenCenter * closedStatePositionOffset, closeDuration));
 
-                    element.DOColor(targetColor, closeDuration)
-                    .SetUpdate(UpdateType.Normal, true)
-                    .SetEase(closeEase)
-                    .OnComplete(() =>
-                    {
-                        canUpdateBloodScreen = true;
-                    });
-                }
-                settingsRect.DOScale(Vector2.one * closedStateScaleOffset, closeDuration)
-                    .SetEase(closeEase)
-                    .OnComplete(() => settingsUi.SetActive(false));
-                settingsRect.DOMove(screenCenter * closedStatePositionOffset, closeDuration)
-                    .SetEase(closeEase);
+                sequence.OnComplete(() => { 
+                    settingsUiGroup.gameObject.SetActive(false);
+                } )
+                        .SetUpdate(UpdateType.Normal, true)
+                        .SetEase(closeEase);
             }
             else
             {
-                foreach (var element in mainUiImages)
-                {
-                    Color startColor = element.color;
-                    Color targetColor = element.color;
-                    targetColor.a = 0f;
+                settingsUiGroup.gameObject.SetActive(true);
 
-                    canUpdateBloodScreen = false;
+                Sequence sequence = DOTween.Sequence();
 
-                    element.DOColor(targetColor, openDuration)
-                    .SetUpdate(UpdateType.Normal, true)
-                    .SetEase(openEase)
-                    .OnComplete(() =>
-                    {
-                        element.color = startColor;
-                        element.gameObject.SetActive(false);
-                    });
-                }
-                foreach (var element in mainUiTexts)
-                {
-                    Color startColor = element.color;
-                    Color targetColor = element.color;
-                    targetColor.a = 0f;
+                sequence.Append(
+                    settingsRect.DOScale(Vector2.one, openDuration));
 
-                    canUpdateBloodScreen = false;
+                sequence.Join(
+                    mainUiGroup.DOFade(0f, openDuration));
 
-                    element.DOColor(targetColor, openDuration)
-                    .SetUpdate(UpdateType.Normal, true)
-                    .SetEase(openEase)
-                    .OnComplete(() =>
-                    {
-                        element.color = startColor;
-                        element.gameObject.SetActive(false);
-                    });
-                }
+                sequence.Join(
+                    settingsUiGroup.DOFade(defaultSettingsUiAplha, openDuration));
 
-                settingsUi.SetActive(true);
-                settingsRect.DOScale(Vector2.one, openDuration).SetEase(openEase);
-                settingsRect.DOMove(screenCenter, openDuration).SetEase(openEase);
+                sequence.Join(
+                    settingsRect.DOMove(screenCenter, openDuration));
+
+                sequence.OnComplete(() => {
+                    mainUiGroup.gameObject.SetActive(false);
+                })
+                        .SetEase(openEase)
+                        .SetUpdate(UpdateType.Normal, true);
             }
         }
 

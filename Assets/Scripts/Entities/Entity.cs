@@ -27,7 +27,7 @@ namespace Assets.Scripts.Entities
         [SerializeField] private float criticalMinLiquidAmount;
 
         [Header("Liquid Harm Properties")]
-        [SerializeField] private float liquidDamageFrequency;
+        [SerializeField] private float liquidCheckFrequency;
 
         [Header("Blood Properties")]
         [Range(0f, 1f)][SerializeField] private float maxBloodlossPercentage;
@@ -56,7 +56,7 @@ namespace Assets.Scripts.Entities
         private LiquidContainer liquids => GetComponent<LiquidContainer>();
 
         private Liquid bloodRef;
-        private float nextLiqudDamage;
+        private float nextLiqudCheck;
         private float nextRegen;
         private float currentRegenAmount;
         private float nextTemperatureDamage;
@@ -70,10 +70,10 @@ namespace Assets.Scripts.Entities
         }
         private void Update()
         {
-            physicsData.CombineTemperature(normalTemperature);
-
             if (Dead())
                 return;
+
+            physicsData.CombineTemperature(normalTemperature);
 
             HandleRegeneration();
             HandleTemperatureDamage();
@@ -128,16 +128,19 @@ namespace Assets.Scripts.Entities
         }
         private void HandleLiquids()
         {
-            foreach (var liquid in liquids.GetLiquids)
+            if (Time.time >= nextLiqudCheck)
             {
-                if (Time.time >= nextLiqudDamage)
-                {
-                    nextLiqudDamage = Time.time + 10f / liquidDamageFrequency;
+                nextLiqudCheck = Time.time + 10f / liquidCheckFrequency;
 
+                foreach (var liquid in liquids.GetLiquids)
+                {
                     switch (liquid.type)
                     {
                         case LiquidContainer.LiquidType.Acid:
                             TakeDamage(liquid.amount / Mathf.Clamp(bloodRef.amount / liquid.amount, 1f, float.PositiveInfinity), this, DamageType.Magic);
+                            break;
+                        case LiquidContainer.LiquidType.Mending:
+                            Heal(liquid.amount);
                             break;
                     }
                 }

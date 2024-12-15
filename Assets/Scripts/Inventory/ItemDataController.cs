@@ -8,6 +8,9 @@ namespace Assets.Scripts.Inventory
 {
     public class ItemDataController : MonoBehaviour
     {
+        [SerializeField] protected Animator handsAnimator;
+        [SerializeField] protected Animator itemAnimator;
+
         [SerializeField] protected InventoryDataController inventory { get; private set; }
         [field: SerializeField] public BaseItemData BaseData { get; private set; }
 
@@ -18,7 +21,7 @@ namespace Assets.Scripts.Inventory
 
         protected DynamicItemData data;
 
-        public void InjectData(DynamicItemData data) => this.data = data;
+        public virtual void InjectData(DynamicItemData data) => this.data = data;
 
         public void ApplyEffect(Effect effect)
         {

@@ -26,7 +26,7 @@ namespace Assets.Scripts.Inventory.View
         {
             if (Input.mouseScrollDelta.y != 0f)
             {
-                int targetIndex = inventory.CurrentItemIndex - (int)Input.mouseScrollDelta.y;
+                int targetIndex = inventory.CurrentItemIndex + (int)Input.mouseScrollDelta.y;
 
                 if (targetIndex < 0)
                     targetIndex = inventory.GetItems.Count - 1;
@@ -42,8 +42,8 @@ namespace Assets.Scripts.Inventory.View
                 {
                     DroppedItem item = hit.collider.GetComponent<DroppedItem>();
 
-                    if (item != null)
-                        inventory.TryAddItem(item.Data);
+                    if (item != null && inventory.TryAddItem(item.Data))
+                        Destroy(item.gameObject);
                 }
             }
             if (Input.GetKeyDown(dropBind))
@@ -51,7 +51,12 @@ namespace Assets.Scripts.Inventory.View
                 DynamicItemData data = inventory.GetItems[inventory.CurrentItemIndex];
 
                 if (inventory.TryRemoveItem(inventory.CurrentItemIndex))
-                    Instantiate(data.data.prefab, holdPos.position, holdPos.rotation).AddComponent<DroppedItem>().Init(data);
+                {
+                    GameObject instantiatedItem = Instantiate(data.data.prefab, holdPos.position, holdPos.rotation);
+                    instantiatedItem.AddComponent<DroppedItem>().Init(data);
+                    instantiatedItem.AddComponent<Rigidbody>();
+                    instantiatedItem.AddComponent<BoxCollider>().size = data.data.ColliderScale;
+                }
             }
         }
         private void ShowCurrentItem()

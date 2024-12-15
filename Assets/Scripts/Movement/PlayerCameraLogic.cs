@@ -1,4 +1,6 @@
 ﻿using Assets.Scripts.Entities;
+using Assets.Scripts.Inventory;
+using Assets.Scripts.Inventory.Scriptables;
 using Assets.Scripts.Ui.Player;
 using System.Collections;
 using UnityEngine;
@@ -10,6 +12,7 @@ namespace Assets.Scripts.Movement
     public class PlayerCameraLogic : MonoBehaviour
     {
         [field: Header("References")]
+        [SerializeField] private InventoryDataController inventory;
         [SerializeField] private TouchscreenJoystick joystick;
         [SerializeField] private Camera cam;
 
@@ -25,7 +28,7 @@ namespace Assets.Scripts.Movement
         [Min(0f)][SerializeField] private float maxCamRotY;
         [Min(0f)][SerializeField] private float camRotLerpSpeed;
 
-        [Header("Noise Properties")]
+        [Header("Noise Rotation Properties")]
         [Min(0f)][SerializeField] private float noiseGenerationSpeed;
         [SerializeField] private float noiseLerpSpeed;
         [SerializeField] private Vector3 noiseRotation;
@@ -35,12 +38,14 @@ namespace Assets.Scripts.Movement
         private PlayerMovementLogic playerMovement => GetComponent<PlayerMovementLogic>();
         private Entity player => GetComponent<Entity>();
         private Rigidbody rb => GetComponent<Rigidbody>();
+
         private float xRot;
         private float zRot;
         private float defaultFov;
         private float targetFov;
         private float _dynamicRotFreqerencyFactor;
         private float noiseRotLerpSpeed;
+        private float savedSpread;
         private float spreadOffset;
         private float healthAspect;
         private float velocity;
@@ -62,6 +67,10 @@ namespace Assets.Scripts.Movement
         {
             defaultFov = cam.fieldOfView;
             cameraTransform = cam.transform;
+
+            inventory.OnItemAdded += HandleItemChange;
+            inventory.OnItemRemoved += HandleItemChange;
+            inventory.OnItemSwitched += HandleItemChange;
         }
         private void Update()
         {
@@ -116,9 +125,23 @@ namespace Assets.Scripts.Movement
                 Random.Range(-curNoiseRot.z, curNoiseRot.z));
         }
 
-        private void Spread(float amount)
+        private void HandleItemChange()
         {
-            spreadOffset = amount;
+            if (inventory.GetItems[inventory.CurrentItemIndex].data is BaseWeaponData baseWeapon)
+            {
+                savedSpread = baseWeapon.Spread;
+
+                WeaponDataController weapon = inventory.AllInGameItems.Find(n => n.BaseData.Id == baseWeapon.Id) as WeaponDataController;
+                if (weapon != null)
+                {
+                    weapon.OnFire -= HandleSpread;
+                    weapon.OnFire += HandleSpread;
+                }
+            }
+        }
+        private void HandleSpread()
+        {
+            spreadOffset = savedSpread;
         }
     }
 }

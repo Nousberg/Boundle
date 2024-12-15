@@ -1,5 +1,7 @@
 ﻿using Assets.Scripts.Inventory;
+using Assets.Scripts.Inventory.DynamicData;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,6 +10,9 @@ namespace Assets.Scripts.Ui.Inventory
     public class InventoryDataVisualizer : MonoBehaviour
     {
         [Header("References")]
+        [SerializeField] private Image ammoBackground;
+        [SerializeField] private TextMeshProUGUI ammoText;
+        [SerializeField] private GameObject ammoContainer;
         [SerializeField] private InventoryDataController inventory;
         [SerializeField] private Transform itemIconsParent;
 
@@ -21,6 +26,17 @@ namespace Assets.Scripts.Ui.Inventory
             inventory.OnItemAdded += UpdateShowedIcons;
             inventory.OnItemRemoved += UpdateShowedIcons;
             inventory.OnItemSwitched += UpdateShowedIcons;
+        }
+        private void ShowAmmo()
+        {
+            if (inventory.GetItems[inventory.CurrentItemIndex] is DynamicWeaponData weapon)
+            {
+                ammoText.text = weapon.currentAmmo.ToString() + " / " + weapon.overallAmmo.ToString();
+                ammoBackground.fillAmount = (float)weapon.currentAmmo / weapon.overallAmmo;
+                ammoContainer.SetActive(true);
+            }
+            else
+                ammoContainer.SetActive(false);
         }
         private void UpdateShowedIcons()
         {
@@ -36,7 +52,7 @@ namespace Assets.Scripts.Ui.Inventory
                 img.sprite = item.data.Icon;
                 img.preserveAspect = true;
 
-                if (inventory.GetItems.IndexOf(item) == inventory.CurrentItemIndex)
+                if (ReferenceEquals(inventory.GetItems[inventory.CurrentItemIndex], item))
                     img.color = new Color(img.color.r, img.color.g, img.color.b, selectedItemOpacity);
 
                 icon.AddComponent<Button>().onClick.AddListener(() => inventory.SwitchItem(inventory.GetItems.IndexOf(item)));
@@ -44,7 +60,14 @@ namespace Assets.Scripts.Ui.Inventory
 
                 icons.Add(icon);
 
+                if (inventory.AllInGameItems.Find(n => n.BaseData.Id == item.data.Id) is WeaponDataController weapon)
+                {
+                    weapon.OnAmmoChanged -= ShowAmmo;
+                    weapon.OnAmmoChanged += ShowAmmo;
+                }
             }
+
+            ShowAmmo();
         }
     }
 }

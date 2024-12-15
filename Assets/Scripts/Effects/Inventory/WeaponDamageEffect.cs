@@ -12,7 +12,7 @@ namespace Assets.Scripts.Effects
                 ItemDataController controller = inventory.AllInGameItems.Find(n => n.BaseData.Id == item.data.Id);
 
                 if (controller != null && controller is WeaponDataController weapon)
-                    weapon.OnFire += ModifyDamage;
+                    weapon.OnFireForEffects += ModifyDamage;
             }
         }
 

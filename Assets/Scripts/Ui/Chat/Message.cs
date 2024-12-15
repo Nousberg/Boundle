@@ -52,38 +52,28 @@ namespace Assets.Scripts.Ui.Chat
             Sequence sequence = DOTween.Sequence();
 
             sequence.Append(MessageText
-                .DOColor(targetMessageColor, animationDuration / 2f)
-                .SetEase(animationEase))
-                .SetUpdate(UpdateType.Normal, true);
+                .DOColor(targetMessageColor, animationDuration / 2f));
 
             sequence.Join(Background
-                .DOColor(targetBackgroundColor, animationDuration / 2f)
-                .SetEase(animationEase))
-                .SetUpdate(UpdateType.Normal, true);
+                .DOColor(targetBackgroundColor, animationDuration / 2f));
 
             sequence.Join(AuthorText
-                .DOColor(targetAuthorColor, animationDuration / 2f)
-                .SetEase(animationEase))
-                .SetUpdate(UpdateType.Normal, true);
+                .DOColor(targetAuthorColor, animationDuration / 2f));
 
             sequence.AppendInterval(animationDuration);
 
             sequence.Append(MessageText
-                .DOColor(Color.clear, animationDuration / 2f)
-                .SetEase(animationEase))
-                .SetUpdate(UpdateType.Normal, true);
+                .DOColor(Color.clear, animationDuration / 2f));
 
             sequence.Join(Background
-                .DOColor(Color.clear, animationDuration / 2f)
-                .SetEase(animationEase))
-                .SetUpdate(UpdateType.Normal, true);
+                .DOColor(Color.clear, animationDuration / 2f));
 
             sequence.Join(AuthorText
-                .DOColor(Color.clear, animationDuration / 2f)
-                .SetEase(animationEase))
-                .SetUpdate(UpdateType.Normal, true);
+                .DOColor(Color.clear, animationDuration / 2f));
 
-            sequence.OnComplete(() => Destroy(gameObject));
+            sequence.OnComplete(() => Destroy(gameObject))
+                    .SetEase(animationEase)
+                    .SetUpdate(UpdateType.Normal, true);
         }
 
         private void OnDestroy()

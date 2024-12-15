@@ -7,9 +7,6 @@ namespace Assets.Scripts.Inventory
     {
         public DynamicItemData Data { get; private set; }
 
-        public void Init(DynamicItemData data)
-        {
-            Data = data;
-        }
+        public void Init(DynamicItemData data) => Data = data;
     }
 }

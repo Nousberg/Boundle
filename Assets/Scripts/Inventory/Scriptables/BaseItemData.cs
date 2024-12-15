@@ -8,6 +8,7 @@ namespace Assets.Scripts.Inventory.Scriptables
         [field: SerializeField] public bool Dropable { get; private set; }
         [field: SerializeField] public int Id { get; private set; }
         [field: SerializeField] public float Weight { get; private set; }
+        [field: SerializeField] public Vector3 ColliderScale { get; private set; }
         [field: SerializeField] public GameObject prefab { get; private set; }
         [field: SerializeField] public Sprite Icon { get; private set; }
     }

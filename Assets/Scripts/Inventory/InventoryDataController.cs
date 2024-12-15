@@ -10,7 +10,6 @@ namespace Assets.Scripts.Inventory
 {
     public class InventoryDataController : MonoBehaviour
     {
-        public EffectContainer c;
         [field: SerializeField] public List<ItemDataController> AllInGameItems { get; private set; } = new List<ItemDataController>();
         [field: SerializeField] public List<ItemDataController> DefaultItems { get; private set; } = new List<ItemDataController>();
         [field: Min(0f)][field: SerializeField] public float MaxInventoryWeight { get; private set; }
@@ -35,7 +34,7 @@ namespace Assets.Scripts.Inventory
                 else if (item.BaseData is BaseWeaponData data)
                     aviableItems.Add(new DynamicWeaponData(data, data.BaseAmmo, data.BaseAmmo, 0f));
             }
-
+            aviableItems.Add(new DynamicWeaponData(DefaultItems[2].BaseData, 2, 3, 0f));
             OnItemAdded?.Invoke();
         }
 

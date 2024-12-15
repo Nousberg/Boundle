@@ -20,12 +20,13 @@ MonoBehaviour:
     type: 3}
   <MyType>k__BackingField: 0
   <DamageType>k__BackingField: 3
-  <Damage>k__BackingField: 1
-  <Spread>k__BackingField: 0
+  <Damage>k__BackingField: 11.07
+  <Spread>k__BackingField: 12
   <Recoil>k__BackingField: 0
-  <FireRate>k__BackingField: Infinity
+  <FireRate>k__BackingField: 1
   <ReloadDuration>k__BackingField: 0
   <Range>k__BackingField: 322
   <CriticalOverheat>k__BackingField: 0
   <OverheatRate>k__BackingField: 0
+  <BulletsPerShot>k__BackingField: 1
   <BaseAmmo>k__BackingField: 1
