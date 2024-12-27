@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -9,13 +8,12 @@ namespace Assets.Scripts.Entities.Liquids
     public class LiquidContainer : MonoBehaviour
     {
         [field: SerializeField] public float Capacity { get; private set; }
+        [SerializeField] private List<Liquid> liquids = new List<Liquid>();
 
         public List<Liquid> GetLiquids => liquids;
         public float Weight => liquids.Sum(n => n.amount);
 
         public event Action OnLiquidsChanged;
-
-        public List<Liquid> liquids = new List<Liquid>();
 
         public void Transfer(LiquidContainer target, float amount)
         {
@@ -91,6 +89,7 @@ namespace Assets.Scripts.Entities.Liquids
 
         public enum LiquidType : byte
         {
+            Water,
             Acid,
             Blood,
             Mending

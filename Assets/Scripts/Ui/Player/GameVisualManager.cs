@@ -16,7 +16,6 @@ namespace Assets.Scripts.Ui.Player
         [Header("References")]
         [SerializeField] private GridLayoutGroup aim;
         [SerializeField] private Image healthImage;
-        [SerializeField] private Volume postProcessing;
         [SerializeField] private TextMeshProUGUI chatBoxText;
         [SerializeField] private Image chatBoxBackground;
         [SerializeField] private GameObject chatBox;
@@ -46,8 +45,6 @@ namespace Assets.Scripts.Ui.Player
         [Range(0f, 1f)][SerializeField] private float closedStateScaleOffset;
         [SerializeField] private Vector2 closedStatePositionOffset;
 
-        public static bool BlockedKeyboard { get; private set; }
-
         private RectTransform settingsRect => settingsUiGroup.GetComponent<RectTransform>();
         private PlayerMovementLogic playerMovement;
         private Entity player;
@@ -63,7 +60,7 @@ namespace Assets.Scripts.Ui.Player
         private bool settingsEnabled;
         private bool isChatOpen;
 
-        private void Start()
+        public void Init()
         {
             defaultMainUiAlpha = mainUiGroup.alpha;
             defaultSettingsUiAplha = settingsUiGroup.alpha;
@@ -80,8 +77,6 @@ namespace Assets.Scripts.Ui.Player
 
             if (Application.platform != RuntimePlatform.Android)
                 mobileUiElements.SetActive(false);
-            else
-                postProcessing.enabled = false;
         }
         private void Update()
         {
@@ -103,8 +98,6 @@ namespace Assets.Scripts.Ui.Player
 
             if (Input.GetKeyDown(KeyCode.Escape))
             {
-                BlockedKeyboard = false;
-
                 ToggleCursor(false);
 
                 if (!isChatOpen)
@@ -140,9 +133,6 @@ namespace Assets.Scripts.Ui.Player
         }
         private void ToggleChat(bool value)
         {
-            if (value)
-                BlockedKeyboard = true;
-
             isChatOpen = value;
             chatBox.SetActive(value);
             aim.gameObject.SetActive(!value);
@@ -154,7 +144,6 @@ namespace Assets.Scripts.Ui.Player
 
             settingsEnabled = value;
 
-            BlockedKeyboard = value;
             ToggleCursor(value);
 
             StartSettingsAnimation();

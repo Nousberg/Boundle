@@ -7,17 +7,19 @@ using UnityEngine.UI;
 
 namespace Assets.Scripts.Ui.Inventory
 {
+    [RequireComponent(typeof(InventoryDataController))]
     public class InventoryDataVisualizer : MonoBehaviour
     {
         [Header("References")]
         [SerializeField] private Image ammoBackground;
         [SerializeField] private TextMeshProUGUI ammoText;
         [SerializeField] private GameObject ammoContainer;
-        [SerializeField] private InventoryDataController inventory;
         [SerializeField] private Transform itemIconsParent;
 
         [Header("Properties")]
         [Range(0f, 1f)][SerializeField] private float selectedItemOpacity;
+
+        private InventoryDataController inventory => GetComponent<InventoryDataController>();
 
         private List<GameObject> icons = new List<GameObject>();
 

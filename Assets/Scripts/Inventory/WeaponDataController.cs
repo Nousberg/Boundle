@@ -1,4 +1,6 @@
-﻿using Assets.Scripts.Entities;
+﻿using Assets.Scripts.Core.Environment;
+using Assets.Scripts.Entities;
+using Assets.Scripts.Entities.Liquids;
 using Assets.Scripts.Inventory.DynamicData;
 using Assets.Scripts.Inventory.Scriptables;
 using System;
@@ -31,31 +33,58 @@ namespace Assets.Scripts.Inventory
         protected void AmmoChangeEvent() => OnAmmoChanged?.Invoke();
         protected void ReloadEvent() => OnReload?.Invoke();
 
-        protected void ThrowDamage(BaseWeaponData weaponData, Transform raycastPos)
+        protected void ThrowDamage(Transform raycastPos)
         {
-            float damage = weaponData.Damage;
+            float damage = baseWeaponData.Damage;
             FireEffectsEvent(ref damage);
 
-            for (int i = 0; i <= weaponData.BulletsPerShot; i++)
+            for (int i = 0; i <= baseWeaponData.BulletsPerShot; i++)
             {
                 RaycastHit hit;
-                if (Physics.Raycast(raycastPos.position, raycastPos.forward, out hit, weaponData.Range))
+                Vector3 recoilAdjustment = new Vector3(
+                UnityEngine.Random.Range(-baseWeaponData.Spread, baseWeaponData.Spread),
+                UnityEngine.Random.Range(-baseWeaponData.Spread, baseWeaponData.Spread),
+                UnityEngine.Random.Range(-baseWeaponData.Spread, baseWeaponData.Spread)
+);
+
+                if (Physics.Raycast(raycastPos.position, raycastPos.forward + recoilAdjustment, out hit, baseWeaponData.Range))
                 {
                     Entity target = hit.collider.GetComponent<Entity>();
 
-                    if (target != null)
-                        target.TakeDamage(damage /
-                            Mathf.Clamp(
-                                Mathf.Abs(
-                                    Mathf.Clamp(
-                                        weaponData.Range -
-                                        Vector3.Distance(transform.position, hit.transform.position),
-                                        1f,
-                                        float.PositiveInfinity) / weaponData.Range),
-                            1f,
-                            float.PositiveInfinity),
-                        carrier,
-                        weaponData.DamageType);
+                    //if (target != null)
+                    //{
+                    //    float damageModifier = 1f;
+                    //
+                    //    if (hit.collider.TryGetComponent<LiquidContainer>(out var liquids))
+                    //    {
+                    //        foreach (var liquid in liquids.GetLiquids)
+                    //            switch (liquid.type)
+                    //            {
+                    //                case LiquidContainer.LiquidType.Water:
+                    //                    damageModifier *= 0.75f;
+                    //                    break;
+                    //                case LiquidContainer.LiquidType.Acid:
+                    //                    damageModifier *= 0.25f;
+                    //                    break;
+                    //            }
+                    //    }
+                    //
+                    //    target.TakeDamage(damageModifier * damage /
+                    //        Mathf.Clamp(
+                    //            Mathf.Abs(
+                    //                Mathf.Clamp(
+                    //                    baseWeaponData.Range -
+                    //                    Vector3.Distance(transform.position, hit.transform.position),
+                    //                    1f,
+                    //                    float.PositiveInfinity) / baseWeaponData.Range),
+                    //        1f,
+                    //        float.PositiveInfinity),
+                    //    carrier,
+                    //    baseWeaponData.DamageType);
+                    //}
+
+                    if (hit.collider.TryGetComponent<Rigidbody>(out var rb))
+                        rb.AddForce(-hit.normal * baseWeaponData.PushStrenght);
                 }
             }
         }

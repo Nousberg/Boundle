@@ -1,5 +1,6 @@
 ﻿using Assets.Scripts.Entities;
 using System.Collections;
+using Photon.Pun;
 using UnityEngine;
 
 namespace Assets.Scripts
@@ -21,8 +22,10 @@ namespace Assets.Scripts
                 currentDamageTime = Time.time + 1f / damageFrequency;
 
                 Entity e = collision.gameObject.GetComponent<Entity>();
-                if (e != null)
-                    e.TakeDamage(damageAmount, thisEntity, damageType);
+                PhotonView view = collision.gameObject.GetComponent<PhotonView>();
+
+                //if (e != null && view != null)
+                //    TakeDamage(damageAmount, thisEntity, damageType);
             }
         }
     }

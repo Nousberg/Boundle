@@ -7,14 +7,10 @@ namespace Assets.Scripts.Inventory.DynamicData
     public class DynamicItemData
     {
         public readonly BaseItemData data;
-        public List<Effect> effects = new List<Effect>();
 
-        public DynamicItemData(BaseItemData data, List<Effect> effects = null)
+        public DynamicItemData(BaseItemData data)
         {
             this.data = data;
-
-            if (effects != null)
-                this.effects = effects;
         }
     }
 }

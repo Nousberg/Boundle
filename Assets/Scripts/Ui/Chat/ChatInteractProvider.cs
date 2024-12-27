@@ -1,4 +1,4 @@
-﻿using Assets.Scripts.Network;
+﻿using Assets.Scripts.Network.Chat;
 using UnityEngine;
 
 namespace Assets.Scripts.Ui.Chat

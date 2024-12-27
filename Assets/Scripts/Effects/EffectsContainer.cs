@@ -14,8 +14,8 @@ namespace Assets.Scripts.Effects
         public void ApplyEffect(Effect effect)
         {
             Effect findedEffect = Effects.Find(n => n.GetType() == effect.GetType());
-
-            if (!effect.isEnded)
+            
+            if (!effect.IsEnded)
             {
                 if (findedEffect != null)
                     findedEffect.CombineEffects(effect);
@@ -41,7 +41,8 @@ namespace Assets.Scripts.Effects
 
         private void HandleEffectEnd(Effect effect)
         {
-            Effects.Remove(Effects.Find(n => n.GetType() == effect.GetType()));
+            Effects.Remove(effect);
+            OnEffectRemoved?.Invoke(effect);
         }
     }
 }

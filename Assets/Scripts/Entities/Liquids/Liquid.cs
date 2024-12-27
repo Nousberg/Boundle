@@ -6,7 +6,6 @@ namespace Assets.Scripts.Entities.Liquids
     public class Liquid
     {
         public LiquidContainer.LiquidType type;
-
         public float amount;
 
         public Liquid(LiquidContainer.LiquidType type, float amount)

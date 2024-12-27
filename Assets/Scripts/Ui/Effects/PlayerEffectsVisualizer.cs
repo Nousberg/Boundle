@@ -12,7 +12,6 @@ namespace Assets.Scripts.Ui.Effects
     {
         [Header("References")]
         [SerializeField] private List<EffectUiData> effectsUiData = new List<EffectUiData>();
-        [SerializeField] private InventoryDataController inventory;
         [SerializeField] private Transform effectsParent;
         [SerializeField] private Transform itemEffectsParent;
 
@@ -30,10 +29,6 @@ namespace Assets.Scripts.Ui.Effects
         {
             effectContainer.OnEffectAdded += AddEffect;
             effectContainer.OnEffectRemoved += RemoveEffect;
-
-            inventory.OnItemSwitched += HandleInventoryChange;
-            inventory.OnItemAdded += HandleInventoryChange;
-            inventory.OnItemRemoved += HandleInventoryChange;
         }
         private void AddEffect(Effect effect)
         {
@@ -44,17 +39,6 @@ namespace Assets.Scripts.Ui.Effects
         {
             effectsOnObject.Remove(effect);
             VisualizeEffects();
-        }
-        private void HandleInventoryChange()
-        {
-            foreach (var item in inventory.AllInGameItems)
-            {
-                item.OnEffectAdded -= AddEffect;
-                item.OnEffectRemoved -= RemoveEffect;
-
-                item.OnEffectAdded += AddEffect;
-                item.OnEffectRemoved += RemoveEffect;
-            }
         }
         private void VisualizeEffects()
         {

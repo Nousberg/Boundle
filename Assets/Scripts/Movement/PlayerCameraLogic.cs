@@ -1,6 +1,7 @@
 ﻿using Assets.Scripts.Entities;
 using Assets.Scripts.Inventory;
 using Assets.Scripts.Inventory.Scriptables;
+using Assets.Scripts.Inventory.View;
 using Assets.Scripts.Ui.Player;
 using System.Collections;
 using UnityEngine;
@@ -8,11 +9,11 @@ using UnityEngine;
 namespace Assets.Scripts.Movement
 {
     [RequireComponent(typeof(Rigidbody))]
+    [RequireComponent(typeof(InventoryDataController))]
     [RequireComponent(typeof(PlayerMovementLogic))]
     public class PlayerCameraLogic : MonoBehaviour
     {
         [field: Header("References")]
-        [SerializeField] private InventoryDataController inventory;
         [SerializeField] private TouchscreenJoystick joystick;
         [SerializeField] private Camera cam;
 
@@ -36,6 +37,7 @@ namespace Assets.Scripts.Movement
         [SerializeField] private float dynamicRotFrequencyFactor;
 
         private PlayerMovementLogic playerMovement => GetComponent<PlayerMovementLogic>();
+        private InventoryDataController inventory => GetComponent<InventoryDataController>();
         private Entity player => GetComponent<Entity>();
         private Rigidbody rb => GetComponent<Rigidbody>();
 
@@ -45,8 +47,8 @@ namespace Assets.Scripts.Movement
         private float targetFov;
         private float _dynamicRotFreqerencyFactor;
         private float noiseRotLerpSpeed;
-        private float savedSpread;
-        private float spreadOffset;
+        private float savedRecoil;
+        private float recoilOffset;
         private float healthAspect;
         private float velocity;
         private Vector3 collCenter;
@@ -97,13 +99,12 @@ namespace Assets.Scripts.Movement
             StartCoroutine("GenerateNoise");
             noiseRot = Vector3.Lerp(noiseRot, generatedNoise, noiseRotLerpSpeed * Time.deltaTime);
 
-            xRot -= mouseInput.y + spreadOffset;
+            xRot -= mouseInput.y + recoilOffset;
             dynamicOffset = _dynamicRotAmplitudeFactor * Mathf.Cos(Time.time * _dynamicRotFreqerencyFactor);
             zRot = Mathf.Lerp(zRot, (-mouseInput.x * zLookOffset) + (keyInput.x * zWalkLookOffset), zLookOffsetSpeed * Time.deltaTime);
 
             transform.Rotate(Vector3.up * mouseInput.x);
             targetRot = Quaternion.Euler(Mathf.Clamp(xRot + jumpCameraOffset * rb.velocity.y, -maxCamRotY, maxCamRotY), 0f, -zRot) * Quaternion.Euler(dynamicOffset * (playerMovement.IsWaking ? 1f : 0f)) * Quaternion.Euler(noiseRot);
-            spreadOffset = 0f;
 
             cameraTransform.transform.localRotation = Quaternion.Slerp(cam.transform.localRotation, targetRot, camRotLerpSpeed * Time.deltaTime);
             cam.fieldOfView = Mathf.Clamp(Mathf.Lerp(cam.fieldOfView, defaultFov + playerMovement.CurrentVelocity * fovOffsetAmount, fovLerpSpeed * Time.deltaTime), 0f, maxFov);
@@ -114,6 +115,8 @@ namespace Assets.Scripts.Movement
             _dynamicRotAmplitudeFactor = dynamicRotAmplitudeFactor / healthAspect * velocity;
             _dynamicRotFreqerencyFactor = dynamicRotFrequencyFactor / healthAspect * velocity;
             curNoiseRot = noiseRotation / healthAspect * velocity;
+
+            recoilOffset = 0f;
         }
 
         private IEnumerator GenerateNoise()
@@ -129,19 +132,16 @@ namespace Assets.Scripts.Movement
         {
             if (inventory.GetItems[inventory.CurrentItemIndex].data is BaseWeaponData baseWeapon)
             {
-                savedSpread = baseWeapon.Spread;
+                savedRecoil = baseWeapon.Recoil;
 
                 WeaponDataController weapon = inventory.AllInGameItems.Find(n => n.BaseData.Id == baseWeapon.Id) as WeaponDataController;
                 if (weapon != null)
                 {
-                    weapon.OnFire -= HandleSpread;
-                    weapon.OnFire += HandleSpread;
+                    weapon.OnFire -= HandleRecoil;
+                    weapon.OnFire += HandleRecoil;
                 }
             }
         }
-        private void HandleSpread()
-        {
-            spreadOffset = savedSpread;
-        }
+        private void HandleRecoil() => recoilOffset = savedRecoil;
     }
 }

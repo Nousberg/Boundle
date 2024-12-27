@@ -47,12 +47,10 @@ namespace Assets.Scripts.Inventory
                     weaponData.fireTime = Time.time + 1f / baseWeaponData.FireRate;
                     weaponData.currentAmmo--;
 
-                    ThrowDamage(baseWeaponData, raycastPos);
-
-                    if (weaponData.currentAmmo <= 0)
-                        HandleReload();
+                    ThrowDamage(raycastPos);
 
                     AmmoChangeEvent();
+                    FireEvent();
                 }
                 else if (Input.GetMouseButtonDown(0))
                 {

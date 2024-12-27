@@ -7,10 +7,10 @@ using Assets.Scripts.Entities;
 
 namespace Assets.Scripts.Ui.Inventory
 {
-    [RequireComponent(typeof(InventoryDataController))]
     public class ItemSway : MonoBehaviour
     {
         [Header("References")]
+        [SerializeField] private InventoryDataController inventory;
         [SerializeField] private PlayerMovementLogic movement;
         [SerializeField] private Entity player;
         [SerializeField] private Rigidbody playerRb;
@@ -28,6 +28,8 @@ namespace Assets.Scripts.Ui.Inventory
         [Header("Rotation Properties")]
         [SerializeField] private float maxRotSwayAmount;
         [SerializeField] private float rotSwayAmount;
+        [SerializeField] private float maxXRotSwayAmount;
+        [SerializeField] private float xRotSwatAmount;
         [SerializeField] private float keyRotSwayAmount;
         [SerializeField] private float rotSwayLerpSpeed;
 
@@ -37,16 +39,15 @@ namespace Assets.Scripts.Ui.Inventory
         [SerializeField] private float noiseLerpSpeed;
 
         [Header("Dynamic Rotation Properties")]
+        [SerializeField] private float recoilMultiplier;
         [SerializeField] private float dynamicRotAmplitude;
         [SerializeField] private float dyanmicRotFrequency;
         [SerializeField] private Vector3 dynamicRotAmount;
 
         private float GetShiftBonus => Input.GetKey(KeyCode.LeftShift) ? 1.5f : 1f;
 
-        private InventoryDataController inventory => GetComponent<InventoryDataController>();
-
-        private float savedSpread;
-        private float spreadOffset;
+        private float savedRecoil;
+        private float recoilOffset;
         private Vector2 mouseInput;
         private Vector3 targetPosition;
         private Vector2 keyInput;
@@ -85,20 +86,26 @@ namespace Assets.Scripts.Ui.Inventory
             Vector3 localVelocity = transform.InverseTransformDirection(playerRb.velocity);
 
             targetPosition = initialPos + new Vector3(
-                Mathf.Clamp(-mouseInput.x + localVelocity.x, minSwayAmountX, maxSwayAmountX), 
+                Mathf.Clamp(-mouseInput.x + -localVelocity.x, minSwayAmountX, maxSwayAmountX), 
                 Mathf.Clamp(-mouseInput.y, -maxSwayAmountX, maxSwayAmountX) + Mathf.Clamp(localVelocity.y * fallSwayAmount, -maxFallSwayAmount, maxFallSwayAmount), 
-                Mathf.Clamp(-localVelocity.z + spreadOffset, minSwayAmountZ, maxSwayAmountZ)) * swayAmount;
+                Mathf.Clamp(-localVelocity.z + -recoilOffset, minSwayAmountZ, maxSwayAmountZ)) * swayAmount;
 
             transform.localPosition = Vector3.Lerp(transform.localPosition, targetPosition, swayLerpSpeed * Time.deltaTime);
 
-            targetRotation = initialRot * (Quaternion.Euler(spreadOffset, 0f, Mathf.Clamp(mouseInput.x + -localVelocity.y * keyRotSwayAmount, -maxRotSwayAmount, maxRotSwayAmount) * rotSwayAmount) * Quaternion.Euler(noiseRot));
+            targetRotation = initialRot * (Quaternion.Euler(-recoilOffset + Mathf.Clamp(localVelocity.y * xRotSwatAmount, -maxXRotSwayAmount, maxXRotSwayAmount), 0f, Mathf.Clamp(mouseInput.x + -localVelocity.y * keyRotSwayAmount, -maxRotSwayAmount, maxRotSwayAmount) * rotSwayAmount) * Quaternion.Euler(noiseRot));
 
             if (movement.IsWaking)
-                targetRotation *= Quaternion.Euler(dynamicRotAmount * (Mathf.Cos(Time.time * (dyanmicRotFrequency * keyInputMagnitude * GetShiftBonus)) * dynamicRotAmplitude * keyInputMagnitude * GetShiftBonus));
+                targetRotation *= Quaternion.Euler(
+                    dynamicRotAmount * 
+                    (Mathf.Cos(Time.time *
+                    (
+                    dyanmicRotFrequency * keyInputMagnitude * GetShiftBonus)) *
+                    dynamicRotAmplitude * keyInputMagnitude * GetShiftBonus
+                    ));
 
             transform.localRotation = Quaternion.Slerp(transform.localRotation, targetRotation, rotSwayLerpSpeed * Time.deltaTime);
 
-            spreadOffset = 0f;
+            recoilOffset = 0f;
         }
         private IEnumerator GenerateNoise()
         {
@@ -113,20 +120,17 @@ namespace Assets.Scripts.Ui.Inventory
         {
             if (inventory.GetItems[inventory.CurrentItemIndex].data is BaseWeaponData baseWeapon)
             {
-                savedSpread = baseWeapon.Spread;
+                savedRecoil = baseWeapon.Recoil * recoilMultiplier;
 
                 WeaponDataController weapon = inventory.AllInGameItems.Find(n => n.BaseData.Id == baseWeapon.Id) as WeaponDataController;
 
                 if (weapon != null)
                 {
-                    weapon.OnFire -= HandleSpread;
-                    weapon.OnFire += HandleSpread;
+                    weapon.OnFire -= HandleRecoil;
+                    weapon.OnFire += HandleRecoil;
                 }
             }
         }
-        private void HandleSpread()
-        {
-            spreadOffset = savedSpread;
-        }
+        private void HandleRecoil() => recoilOffset = savedRecoil;
     }
 }

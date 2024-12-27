@@ -7,8 +7,8 @@ namespace Assets.Scripts.Ui
     public class MainMenuSceneSwitcher : MonoBehaviour
     {
         [SerializeField] private GameObject loadingBar;
+        [SerializeField] private GameObject prevPageButton;
         [SerializeField] private Image progress;
-        [SerializeField] private GameObject menuBar;
 
         private SceneSwitcher sceneSwitcher => GetComponent<SceneSwitcher>();
 
@@ -20,11 +20,9 @@ namespace Assets.Scripts.Ui
 
         public void LoadScene(int id)
         {
-            if (sceneSwitcher.SwitchScene(id))
-            {
-                loadingBar.SetActive(true);
-                menuBar.SetActive(false);
-            }
+            sceneSwitcher.SwitchScene(id);
+            prevPageButton.SetActive(false);
+            loadingBar.SetActive(true);
         }
     }
 }

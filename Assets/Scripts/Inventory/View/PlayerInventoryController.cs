@@ -24,7 +24,7 @@ namespace Assets.Scripts.Inventory.View
         }
         private void Update()
         {
-            if (Input.mouseScrollDelta.y != 0f)
+            if (Input.mouseScrollDelta.y != 0f && !ToolgunDataController.IsHolding)
             {
                 int targetIndex = inventory.CurrentItemIndex + (int)Input.mouseScrollDelta.y;
 

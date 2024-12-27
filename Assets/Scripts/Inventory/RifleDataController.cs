@@ -11,51 +11,44 @@ namespace Assets.Scripts.Inventory
 
         private void Update()
         {
-            if (data is DynamicWeaponData weaponData && data.data is BaseWeaponData baseWeaponData)
+            if (weaponData != null)
             {
-                if (baseWeaponData.MyType == BaseWeaponData.WeaponType.Rifle)
+                if (weaponData.reloadTime > 0f && weaponData.overallAmmo > 0)
                 {
-                    if (weaponData.reloadTime > 0f && weaponData.overallAmmo > 0)
+                    weaponData.reloadTime -= Time.deltaTime;
+
+                    if (weaponData.reloadTime <= 0f)
                     {
-                        weaponData.reloadTime -= Time.deltaTime;
+                        handsAnimator.SetBool("Reload", false);
+                        itemAnimator.SetBool("Reload", false);
 
-                        if (weaponData.reloadTime <= 0f)
-                        {
-                            handsAnimator.SetBool("Reload", false);
-                            itemAnimator.SetBool("Reload", false);
-
-                            int v = weaponData.overallAmmo;
-                            weaponData.overallAmmo -= Mathf.Clamp(baseWeaponData.BaseAmmo - weaponData.currentAmmo, 0, weaponData.overallAmmo);
-                            weaponData.currentAmmo += Mathf.Clamp(baseWeaponData.BaseAmmo - weaponData.currentAmmo, 0, v);
-                            AmmoChangeEvent();
-                        }
+                        int v = weaponData.overallAmmo;
+                        weaponData.overallAmmo -= Mathf.Clamp(baseWeaponData.BaseAmmo - weaponData.currentAmmo, 0, weaponData.overallAmmo);
+                        weaponData.currentAmmo += Mathf.Clamp(baseWeaponData.BaseAmmo - weaponData.currentAmmo, 0, v);
+                        AmmoChangeEvent();
                     }
-
-                    if (Input.GetKeyDown(KeyCode.R) && weaponData.currentAmmo != weaponData.overallAmmo && weaponData.overallAmmo > 0 && weaponData.reloadTime <= 0f)
-                        HandleReload(weaponData, baseWeaponData);
-
-                    HandleFire(weaponData, baseWeaponData);
                 }
-                else if (baseWeaponData.MyType == BaseWeaponData.WeaponType.Melee)
-                    HandleFire(weaponData, baseWeaponData);
+
+                if (Input.GetKeyDown(KeyCode.R) && weaponData.currentAmmo != weaponData.overallAmmo && weaponData.overallAmmo > 0 && weaponData.reloadTime <= 0f)
+                    HandleReload();
+
+                HandleFire();
             }
         }
-        private void HandleFire(DynamicWeaponData data, BaseWeaponData weaponData)
+        private void HandleFire()
         {
-            if (Input.GetMouseButton(0) && data.fireTime <= Time.time && data.currentAmmo > 0)
+            if (Input.GetMouseButton(0) && weaponData.fireTime <= Time.time && weaponData.currentAmmo > 0)
             {
                 handsAnimator.SetBool("Fire", true);
                 itemAnimator.SetBool("Fire", true);
 
-                data.fireTime = Time.time + 1f / weaponData.FireRate;
-                data.currentAmmo--;
+                weaponData.fireTime = Time.time + 1f / baseWeaponData.FireRate;
 
-                ThrowDamage(weaponData, raycastPos);
-
-                if (data.currentAmmo <= 0)
-                    HandleReload(data, weaponData);
-
+                weaponData.currentAmmo--;
                 AmmoChangeEvent();
+
+                ThrowDamage(raycastPos);
+                FireEvent();
             }
             else if (!Input.GetMouseButton(0))
             {
@@ -63,11 +56,12 @@ namespace Assets.Scripts.Inventory
                 itemAnimator.SetBool("Fire", false);
             }
         }
-        private void HandleReload(DynamicWeaponData data, BaseWeaponData weaponData)
+        private void HandleReload()
         {
-            data.reloadTime = weaponData.ReloadDuration;
+            weaponData.reloadTime = baseWeaponData.ReloadDuration;
             handsAnimator.SetBool("Reload", true);
             itemAnimator.SetBool("Reload", true);
+
             ReloadEvent();
             AmmoChangeEvent();
         }

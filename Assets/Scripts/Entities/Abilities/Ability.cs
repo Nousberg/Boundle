@@ -1,5 +1,4 @@
 ﻿using Assets.Scripts.Entities.Abilities.Scriptables;
-using Assets.Scripts.Ui.Player;
 using System.Collections;
 using UnityEngine;
 
@@ -13,7 +12,7 @@ namespace Assets.Scripts.Entities.Abilities
 
         private void Update()
         {
-            if (Input.GetKeyDown(data.KeyBind) && !GameVisualManager.BlockedKeyboard)
+            if (Input.GetKeyDown(data.KeyBind))
             {
                 toggled = !toggled;
 

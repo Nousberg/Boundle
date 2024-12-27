@@ -12,7 +12,7 @@ namespace Assets.Scripts.Inventory.DynamicData
         public float fireTime;
         public float overheat;
 
-        public DynamicWeaponData(BaseItemData data, int currentAmmo, int overallAmmo, float overheat, List<Effect> effects = null) : base(data, effects)
+        public DynamicWeaponData(BaseItemData data, int currentAmmo, int overallAmmo, float overheat) : base(data)
         {
             this.currentAmmo = currentAmmo;
             this.overallAmmo = overallAmmo;

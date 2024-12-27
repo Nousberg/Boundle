@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,7 +11,7 @@ namespace Assets.Scripts.Effects
 
         public int Duration { get; private set; }
         public float Amplifier { get; protected set; }
-        public bool isEnded { get; private set; }
+        public bool IsEnded { get; private set; }
 
         public event Action<Effect> OnEffectEnded;
 
@@ -34,8 +35,11 @@ namespace Assets.Scripts.Effects
         }
         public void SetDuration(int value)
         {
-            if (value < 0)
+            if (value <= 0)
+            {
+                StopEffect();
                 return;
+            }
 
             Duration = value;
             tokenSource.Cancel();
@@ -44,7 +48,7 @@ namespace Assets.Scripts.Effects
         public void StopEffect()
         {
             tokenSource?.Cancel();
-            isEnded = true;
+            IsEnded = true;
             OnEffectEnded?.Invoke(this);
         }
 
@@ -53,7 +57,7 @@ namespace Assets.Scripts.Effects
         private async Task StartEffectLifeCycle(CancellationToken token)
         {
             await Task.Delay(Duration, token);
-            isEnded = true;
+            IsEnded = true;
             OnEffectEnded?.Invoke(this);
         }
     }
