@@ -1,19 +1,7 @@
-﻿// ----------------------------------------------------------------------------
-// <copyright file="PhotonRigidbodyView.cs" company="Exit Games GmbH">
-//   PhotonNetwork Framework for Unity - Copyright (C) 2018 Exit Games GmbH
-// </copyright>
-// <summary>
-//   Component to synchronize rigidbodies via PUN.
-// </summary>
-// <author>developer@exitgames.com</author>
-// ----------------------------------------------------------------------------
-
+﻿using UnityEngine;
 
 namespace Photon.Pun
 {
-    using UnityEngine;
-
-
     [RequireComponent(typeof(Rigidbody))]
     [AddComponentMenu("Photon Networking/Photon Rigidbody View")]
     public class PhotonRigidbodyView : MonoBehaviourPun, IPunObservable
@@ -21,11 +9,12 @@ namespace Photon.Pun
         private float m_Distance;
         private float m_Angle;
 
-        private Rigidbody m_Body;
+        public Rigidbody m_Body { get; private set; }
 
         private Vector3 m_NetworkPosition;
-
         private Quaternion m_NetworkRotation;
+
+        [SerializeField] private bool syncGravityUse;
 
         [HideInInspector]
         public bool m_SynchronizeVelocity = true;
@@ -54,10 +43,37 @@ namespace Photon.Pun
             }
         }
 
+        [PunRPC]
+        public void AddForce(Vector3 f)
+        {
+            if (photonView.IsMine)
+                this.m_Body.AddForce(f);
+        }
+        [PunRPC]
+        public void SetPosition(Vector3 p)
+        {
+            if (photonView.IsMine)
+                this.m_Body.position = p;
+        }
+        [PunRPC]
+        public void SetVelocity(Vector3 v)
+        {
+            if (photonView.IsMine)
+                this.m_Body.velocity = v;
+        }
+        [PunRPC]
+        public void SetGravityUse(bool state)
+        {
+            if (photonView.IsMine)
+                this.m_Body.useGravity = state;
+        }
         public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
         {
             if (stream.IsWriting)
             {
+                if (syncGravityUse)
+                    stream.SendNext(m_Body.useGravity);
+
                 stream.SendNext(this.m_Body.position);
                 stream.SendNext(this.m_Body.rotation);
 
@@ -73,6 +89,8 @@ namespace Photon.Pun
             }
             else
             {
+                m_Body.useGravity = (bool)stream.ReceiveNext();
+
                 this.m_NetworkPosition = (Vector3)stream.ReceiveNext();
                 this.m_NetworkRotation = (Quaternion)stream.ReceiveNext();
 
@@ -83,7 +101,7 @@ namespace Photon.Pun
                         this.m_Body.position = this.m_NetworkPosition;
                     }
                 }
-                
+
                 if (this.m_SynchronizeVelocity || this.m_SynchronizeAngularVelocity)
                 {
                     float lag = Mathf.Abs((float)(PhotonNetwork.Time - info.SentServerTime));
@@ -91,18 +109,14 @@ namespace Photon.Pun
                     if (this.m_SynchronizeVelocity)
                     {
                         this.m_Body.velocity = (Vector3)stream.ReceiveNext();
-
                         this.m_NetworkPosition += this.m_Body.velocity * lag;
-
                         this.m_Distance = Vector3.Distance(this.m_Body.position, this.m_NetworkPosition);
                     }
 
                     if (this.m_SynchronizeAngularVelocity)
                     {
                         this.m_Body.angularVelocity = (Vector3)stream.ReceiveNext();
-
                         this.m_NetworkRotation = Quaternion.Euler(this.m_Body.angularVelocity * lag) * this.m_NetworkRotation;
-
                         this.m_Angle = Quaternion.Angle(this.m_Body.rotation, this.m_NetworkRotation);
                     }
                 }

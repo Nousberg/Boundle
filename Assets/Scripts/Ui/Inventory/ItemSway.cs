@@ -4,6 +4,9 @@ using Assets.Scripts.Movement;
 using System.Collections;
 using UnityEngine;
 using Assets.Scripts.Entities;
+using UnityEngine.Rendering;
+using Assets.Scripts.Core.InputSystem;
+using Assets.Scripts.Core.Input_System;
 
 namespace Assets.Scripts.Ui.Inventory
 {
@@ -16,6 +19,7 @@ namespace Assets.Scripts.Ui.Inventory
         [SerializeField] private Rigidbody playerRb;
 
         [Header("Position Properties")]
+        [SerializeField] private float keyInfluenceSpeed;
         [SerializeField] private float maxFallSwayAmount;
         [SerializeField] private float maxSwayAmountX;
         [SerializeField] private float minSwayAmountX;
@@ -39,12 +43,15 @@ namespace Assets.Scripts.Ui.Inventory
         [SerializeField] private float noiseLerpSpeed;
 
         [Header("Dynamic Rotation Properties")]
+        [SerializeField] private float shiftBonus;
         [SerializeField] private float recoilMultiplier;
         [SerializeField] private float dynamicRotAmplitude;
         [SerializeField] private float dyanmicRotFrequency;
         [SerializeField] private Vector3 dynamicRotAmount;
 
-        private float GetShiftBonus => Input.GetKey(KeyCode.LeftShift) ? 1.5f : 1f;
+        public InputState inputSource;
+
+        private float shiftPressBonus => inputSource.BoolBinds[InputHandler.InputBind.RUNSTATE]() ? shiftBonus : 1f;
 
         private float savedRecoil;
         private float recoilOffset;
@@ -57,7 +64,7 @@ namespace Assets.Scripts.Ui.Inventory
         private Quaternion targetRotation;
         private Quaternion initialRot;
 
-        private void Start()
+        public void Init()
         {
             initialPos = transform.localPosition;
             initialRot = transform.localRotation;
@@ -78,8 +85,8 @@ namespace Assets.Scripts.Ui.Inventory
 
             noiseRot = Vector3.Slerp(noiseRot, generatedNoise / Mathf.Max(player.Health / player.BaseHealth, 0.25f), noiseLerpSpeed * Time.deltaTime);
 
-            mouseInput = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));
-            keyInput = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+            mouseInput = inputSource.VectorBinds[InputHandler.InputBind.LOOK];
+            keyInput = new Vector3(inputSource.VectorBinds[InputHandler.InputBind.WASD].y, 0f, inputSource.VectorBinds[InputHandler.InputBind.WASD].x);
 
             float keyInputMagnitude = keyInput.magnitude;
 
@@ -97,10 +104,10 @@ namespace Assets.Scripts.Ui.Inventory
             if (movement.IsWaking)
                 targetRotation *= Quaternion.Euler(
                     dynamicRotAmount * 
-                    (Mathf.Cos(Time.time *
+                    (Mathf.Cos(Time.time +
                     (
-                    dyanmicRotFrequency * keyInputMagnitude * GetShiftBonus)) *
-                    dynamicRotAmplitude * keyInputMagnitude * GetShiftBonus
+                    dyanmicRotFrequency * keyInputMagnitude * shiftBonus)) *
+                    dynamicRotAmplitude * keyInputMagnitude * shiftBonus
                     ));
 
             transform.localRotation = Quaternion.Slerp(transform.localRotation, targetRotation, rotSwayLerpSpeed * Time.deltaTime);

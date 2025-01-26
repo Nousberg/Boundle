@@ -1,23 +1,20 @@
-﻿using Assets.Scripts.Entities;
+﻿using Assets.Scripts.Core.Input_System;
+using Assets.Scripts.Core.InputSystem;
+using Assets.Scripts.Entities;
 using Assets.Scripts.Movement;
 using DG.Tweening;
+using Photon.Pun;
 using System.Collections;
-using TMPro;
 using UnityEngine;
-using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 namespace Assets.Scripts.Ui.Player
 {
     public class GameVisualManager : MonoBehaviour
     {
-        [SerializeField] private GameObject playerObj;
-
         [Header("References")]
         [SerializeField] private GridLayoutGroup aim;
         [SerializeField] private Image healthImage;
-        [SerializeField] private TextMeshProUGUI chatBoxText;
-        [SerializeField] private Image chatBoxBackground;
         [SerializeField] private GameObject chatBox;
         [SerializeField] private GameObject mobileUiElements;
         [SerializeField] private CanvasGroup mainUiGroup;
@@ -46,9 +43,12 @@ namespace Assets.Scripts.Ui.Player
         [SerializeField] private Vector2 closedStatePositionOffset;
 
         private RectTransform settingsRect => settingsUiGroup.GetComponent<RectTransform>();
-        private PlayerMovementLogic playerMovement;
-        private Entity player;
+        private PlayerMovementLogic playerMovement => GetComponent<PlayerMovementLogic>();
+        private Entity player => GetComponent<Entity>();
+        private PhotonView view => GetComponent<PhotonView>();
 
+        private InputMachine inputMachine;
+        private Sequence settingsAnim;
         private float defaultMainUiAlpha;
         private float defaultSettingsUiAplha;
         private float targetTransperency;
@@ -60,70 +60,60 @@ namespace Assets.Scripts.Ui.Player
         private bool settingsEnabled;
         private bool isChatOpen;
 
-        public void Init()
+        public void Init(InputMachine inputMachine)
         {
+            this.inputMachine = inputMachine;
+
             defaultMainUiAlpha = mainUiGroup.alpha;
             defaultSettingsUiAplha = settingsUiGroup.alpha;
-
-            player = playerObj.GetComponent<Entity>();
-            playerMovement = playerObj.GetComponent<PlayerMovementLogic>();
 
             player.OnHealthChanged += UpdateHealthUI;
 
             startSpacing = aim.spacing;
             startCellSize = aim.cellSize;
 
-            chatBoxText.enableWordWrapping = true;
-
             if (Application.platform != RuntimePlatform.Android)
                 mobileUiElements.SetActive(false);
         }
         private void Update()
         {
-            float velocity = Mathf.Clamp(playerMovement.CurrentVelocity * 0.25f, 1f, 6f);
-
-            aimUiGroup.alpha = Mathf.Lerp(aimUiGroup.alpha, defaultAimTransperency / velocity, aimLerpSpeed * Time.deltaTime);
-
-            aim.spacing = Vector2.Lerp(
-                aim.spacing,
-                startSpacing + startSpacing * playerMovement.CurrentVelocity,
-                aimLerpSpeed * Time.deltaTime);
-            aim.cellSize = Vector2.Lerp(
-                aim.cellSize,
-                startCellSize * Mathf.Clamp(playerMovement.CurrentVelocity * 0.15f, 1f, 2f),
-                aimLerpSpeed * Time.deltaTime);
-
-            if (canLerpInUpdate && canUpdateBloodScreen)
-                healthImage.color = new Color(healthImage.color.r, healthImage.color.g, healthImage.color.b, Mathf.Lerp(healthImage.color.a, targetTransperency + targetTransperency * 0.35f * Mathf.Cos(Time.time * targetSinFrequerency) * transperencySinAmplitude, transperencyLerpSpeed * Time.deltaTime));
-
-            if (Input.GetKeyDown(KeyCode.Escape))
+            if (view.IsMine)
             {
-                ToggleCursor(false);
+                float velocity = Mathf.Clamp(playerMovement.CurrentVelocity * 0.25f, 1f, 6f);
 
-                if (!isChatOpen)
-                    ToggleSettings(!settingsEnabled);
+                aimUiGroup.alpha = Mathf.Lerp(aimUiGroup.alpha, defaultAimTransperency / velocity, aimLerpSpeed * Time.deltaTime);
 
-                ToggleChat(false);
-            }
-            else if (Input.GetKeyDown(chatOpenBind))
-            {
-                if (!settingsEnabled)
+                aim.spacing = Vector2.Lerp(
+                    aim.spacing,
+                    startSpacing + startSpacing * playerMovement.CurrentVelocity,
+                    aimLerpSpeed * Time.deltaTime);
+                aim.cellSize = Vector2.Lerp(
+                    aim.cellSize,
+                    startCellSize * Mathf.Clamp(playerMovement.CurrentVelocity * 0.15f, 1f, 2f),
+                    aimLerpSpeed * Time.deltaTime);
+
+                if (canLerpInUpdate && canUpdateBloodScreen)
+                    healthImage.color = new Color(healthImage.color.r, healthImage.color.g, healthImage.color.b, Mathf.Lerp(healthImage.color.a, targetTransperency + targetTransperency * 0.35f * Mathf.Cos(Time.time * targetSinFrequerency) * transperencySinAmplitude, transperencyLerpSpeed * Time.deltaTime));
+
+                if (Input.GetKeyDown(KeyCode.Escape))
                 {
-                    ToggleChat(true);
-                    ToggleCursor(true);
+                    inputMachine.blockInput = false;
+                    ToggleCursor(false);
+
+                    if (!isChatOpen)
+                        ToggleSettings(!settingsEnabled);
+
+                    ToggleChat(false);
+                }
+                else if (Input.GetKeyDown(chatOpenBind))
+                {
+                    if (!settingsEnabled)
+                    {
+                        ToggleChat(true);
+                        ToggleCursor(true);
+                    }
                 }
             }
-        }
-
-        public void UpdateChatBoxSize()
-        {
-            Bounds messageBounds = chatBoxText.textBounds;
-
-            Vector2 targetSize;
-            targetSize.x = messageBounds.size.x + widthPadding;
-            targetSize.y = messageBounds.size.y + heightPadding;
-
-            chatBoxBackground.rectTransform.sizeDelta = targetSize;
         }
 
         private void ToggleCursor(bool state)
@@ -133,6 +123,9 @@ namespace Assets.Scripts.Ui.Player
         }
         private void ToggleChat(bool value)
         {
+            if (value)
+                inputMachine.blockInput = true;
+
             isChatOpen = value;
             chatBox.SetActive(value);
             aim.gameObject.SetActive(!value);
@@ -140,7 +133,10 @@ namespace Assets.Scripts.Ui.Player
         private void ToggleSettings(bool value)
         {
             if (value)
+            {
+                inputMachine.blockInput = true;
                 ToggleChat(false);
+            }
 
             settingsEnabled = value;
 
@@ -152,25 +148,27 @@ namespace Assets.Scripts.Ui.Player
         {
             Vector2 screenCenter = new Vector2(Screen.width / 2, Screen.height / 2);
 
+            settingsAnim.Kill();
+
             if (!settingsEnabled)
             {
                 mainUiGroup.gameObject.SetActive(true);
 
-                Sequence sequence = DOTween.Sequence();
+                settingsAnim = DOTween.Sequence();
 
-                sequence.Append(
+                settingsAnim.Append(
                     mainUiGroup.DOFade(defaultMainUiAlpha, closeDuration));
 
-                sequence.Join(
+                settingsAnim.Join(
                     settingsUiGroup.DOFade(0f, closeDuration));
 
-                sequence.Join(
+                settingsAnim.Join(
                     settingsRect.DOScale(Vector2.one * closedStateScaleOffset, closeDuration));
 
-                sequence.Join(
+                settingsAnim.Join(
                     settingsRect.DOMove(screenCenter * closedStatePositionOffset, closeDuration));
 
-                sequence.OnComplete(() => { 
+                settingsAnim.OnComplete(() => { 
                     settingsUiGroup.gameObject.SetActive(false);
                 } )
                         .SetUpdate(UpdateType.Normal, true)
@@ -180,21 +178,21 @@ namespace Assets.Scripts.Ui.Player
             {
                 settingsUiGroup.gameObject.SetActive(true);
 
-                Sequence sequence = DOTween.Sequence();
+                settingsAnim = DOTween.Sequence();
 
-                sequence.Append(
+                settingsAnim.Append(
                     settingsRect.DOScale(Vector2.one, openDuration));
 
-                sequence.Join(
+                settingsAnim.Join(
                     mainUiGroup.DOFade(0f, openDuration));
 
-                sequence.Join(
+                settingsAnim.Join(
                     settingsUiGroup.DOFade(defaultSettingsUiAplha, openDuration));
 
-                sequence.Join(
+                settingsAnim.Join(
                     settingsRect.DOMove(screenCenter, openDuration));
 
-                sequence.OnComplete(() => {
+                settingsAnim.OnComplete(() => {
                     mainUiGroup.gameObject.SetActive(false);
                 })
                         .SetEase(openEase)

@@ -1,5 +1,4 @@
 using Assets.Scripts.Effects;
-using Assets.Scripts.Inventory;
 using Assets.Scripts.Ui.Effects.Sciptables;
 using System.Collections.Generic;
 using UnityEngine;
@@ -25,7 +24,7 @@ namespace Assets.Scripts.Ui.Effects
         private List<GameObject> itemEffectObjects = new List<GameObject>();
         private List<Effect> effectsOnObject = new List<Effect>();
 
-        private void Start()
+        public void Init()
         {
             effectContainer.OnEffectAdded += AddEffect;
             effectContainer.OnEffectRemoved += RemoveEffect;
@@ -45,7 +44,11 @@ namespace Assets.Scripts.Ui.Effects
             foreach (var effect in effectObjects)
                 Destroy(effect);
 
+            foreach (var effect in itemEffectObjects)
+                Destroy(effect.gameObject);
+
             effectObjects.Clear();
+            itemEffectObjects.Clear();
 
             foreach (var effect in effectsOnObject)
             {

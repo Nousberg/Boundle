@@ -23,7 +23,7 @@ namespace Assets.Scripts.Ui.Inventory
 
         private List<GameObject> icons = new List<GameObject>();
 
-        private void Start()
+        public void Init()
         {
             inventory.OnItemAdded += UpdateShowedIcons;
             inventory.OnItemRemoved += UpdateShowedIcons;

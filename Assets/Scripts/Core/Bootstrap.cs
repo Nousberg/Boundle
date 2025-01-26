@@ -1,18 +1,27 @@
-using Assets.Scripts.Entities;
-using Assets.Scripts.Ui.Player;
-using System.Collections;
-using System.Collections.Generic;
+﻿using Assets.Scripts.Core.InputSystem;
+using Assets.Scripts.Network;
+using Assets.Scripts.Network.Chat;
+using Assets.Scripts.Spawning;
+using Assets.Scripts.Ui.Multiplayer;
 using UnityEngine;
 
 namespace Assets.Scripts.Core
 {
     public class Bootstrap : MonoBehaviour
     {
-        [SerializeField] private GameVisualManager visualManager;
+        [SerializeField] private InputHandler input;
+        [SerializeField] private ChatInputHandler chat;
+        [SerializeField] private CommandParser cmd;
+        [SerializeField] private PlayerValidator playerValidator;
+        [SerializeField] private Summonables summoner;
 
-        private void Awake()
+        private void Start()
         {
-            visualManager.Init();
+            input.Init();
+            playerValidator.Init(summoner);
+            summoner.Init();
+            chat.Init();
+            cmd.Init();
         }
     }
 }

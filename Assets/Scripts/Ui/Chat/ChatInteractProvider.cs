@@ -1,16 +1,20 @@
 ﻿using Assets.Scripts.Network.Chat;
+using Photon.Pun;
+using System;
 using UnityEngine;
 
 namespace Assets.Scripts.Ui.Chat
 {
-    [RequireComponent(typeof(ChatInputHandler))]
     public class ChatInteractProvider : MonoBehaviour
     {
-        [Header("References")]
-        [SerializeField] private GameObject player;
+        private ChatInputHandler chat;
 
-        private ChatInputHandler chat => GetComponent<ChatInputHandler>();
+        public void Init(ChatInputHandler cHandler)
+        {
+            chat = cHandler;
+            Send("/effect add self godness 1 50 true");
+        }
 
-        public void Send(string message) => chat.HandleMessage(message, "me", player);
+        public void Send(string message) => chat.HandleMessage(new Message(Guid.NewGuid(), PhotonNetwork.NickName, message), gameObject);
     }
 }

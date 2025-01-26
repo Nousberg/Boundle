@@ -25,7 +25,7 @@ namespace Assets.Scripts.Inventory
 
         private List<DynamicItemData> aviableItems = new List<DynamicItemData>();
 
-        private void Start()
+        public void Init()
         {
             foreach (var item in DefaultItems)
             {

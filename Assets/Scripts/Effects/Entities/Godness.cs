@@ -9,9 +9,9 @@ namespace Assets.Scripts.Effects
         {
         }
 
-        public override void ModifyDamage(ref float amount, DamageType type, Entity attacker)
+        public override void ModifyDamage(ref float amount, DamageData.DamageType type, Entity attacker)
         {
-            //attacker.TakeDamage(amount * Mathf.Clamp01(Amplifier / 100f), attacker, DamageType.Generic);
+            attacker.TakeDamage(amount * Mathf.Clamp01(Amplifier / 100f), attacker, DamageData.DamageType.Generic);
         }
         public override void CombineEffects(Effect effect)
         {

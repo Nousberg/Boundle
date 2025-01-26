@@ -23,8 +23,6 @@ namespace Assets.Scripts.Inventory
             {
                 if (Input.GetMouseButton(0) && weaponData.fireTime <= Time.time)
                 {
-                    //handsAnimator.SetFloat("AttackSpeed", defaultAttackAnimsSpeed * (carrier.Health / carrier.BaseHealth));
-
                     weaponData.fireTime = Time.time + 1f / baseWeaponData.FireRate;
 
                     ThrowDamage(raycastPos);

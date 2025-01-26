@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a4a281dc9831ee419b07ebdbdfc32b3, type: 3}
   m_Name: Fly
   m_EditorClassIdentifier: 
-  <KeyBind>k__BackingField: 102
+  <KeyBind>k__BackingField: 20
   <Duration>k__BackingField: Infinity
   <StartDelay>k__BackingField: 0
   <Cooldown>k__BackingField: 0

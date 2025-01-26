@@ -5,14 +5,16 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Assets.Scripts.Network;
+using Photon.Pun;
+using Assets.Scripts.Core;
+using System.Linq;
 
 namespace Assets.Scripts.Entities
 {
     [RequireComponent(typeof(PhysicsPropertiesContainer))]
-    [RequireComponent(typeof(LocalEntity))]
     [RequireComponent(typeof(LiquidContainer))]
-    public class Entity : MonoBehaviour, IDamageable
+    [RequireComponent(typeof(PhotonView))]
+    public class Entity : MonoBehaviourPun, IPunObservable, IDamageable
     {
         [field: Header("Entity properties")]
         [field: SerializeField] public EntityType MyType { get; private set; }
@@ -43,9 +45,9 @@ namespace Assets.Scripts.Entities
         [field: Header("Health")]
         [field: Min(0f)][field: SerializeField] public float BaseHealth { get; private set; }
         [field: SerializeField] public bool Invulnerable { get; private set; }
-        [field: SerializeField] public List<DamageType> DamageSensors { get; private set; } = new List<DamageType>();
+        [field: SerializeField] public List<DamageData.DamageType> DamageSensors { get; private set; } = new List<DamageData.DamageType>();
 
-        public delegate void DamageHandler(ref float amount, DamageType type, LocalEntity attacker);
+        public delegate void DamageHandler(ref float amount, DamageData.DamageType type, Entity attacker);
 
         public event DamageHandler OnDamageTakenForEffects;
         public event Action<float> OnDamageTaken;
@@ -55,8 +57,8 @@ namespace Assets.Scripts.Entities
         [field: SerializeField] public float Health { get; private set; }
 
         private PhysicsPropertiesContainer physicsData => GetComponent<PhysicsPropertiesContainer>();
-        private LocalEntity localEntity => GetComponent<LocalEntity>();
         private LiquidContainer liquids => GetComponent<LiquidContainer>();
+        private PhotonView view => GetComponent<PhotonView>();
 
         private Liquid bloodRef;
         private float nextLiqudCheck;
@@ -64,16 +66,16 @@ namespace Assets.Scripts.Entities
         private float currentRegenAmount;
         private float nextTemperatureDamage;
 
-        public void Start()
+        public void Init()
         {
             Health = BaseHealth;
 
             liquids.OnLiquidsChanged += GetBloodRef;
-            liquids.TryInject(LiquidContainer.LiquidType.Blood, normalBloodAmount);
+            liquids.Inject(LiquidContainer.LiquidType.Blood, normalBloodAmount, view);
         }
         private void Update()
         {
-            if (Dead())
+            if (!photonView.IsMine || Dead())
                 return;
 
             physicsData.CombineTemperature(normalTemperature);
@@ -93,7 +95,7 @@ namespace Assets.Scripts.Entities
             float velocity = collision.relativeVelocity.magnitude;
 
             if (velocity >= criticalFallVelocity)
-                localEntity.TakeDamage(velocity, localEntity, DamageType.Gravity);
+                TakeDamage(velocity, this, DamageData.DamageType.Gravity);
         }
         private void GetBloodRef()
         {
@@ -121,12 +123,12 @@ namespace Assets.Scripts.Entities
             if (physicsData.Temperature > criticalMaxTemperature && Time.time >= nextTemperatureDamage)
             {
                 nextTemperatureDamage = Time.time + criticalMaxTemperature / physicsData.Temperature;
-                localEntity.TakeDamage((physicsData.Temperature - criticalMaxTemperature) * (1f - temperatureResistance), localEntity, DamageType.Magic);
+                TakeDamage((physicsData.Temperature - criticalMaxTemperature) * (1f - temperatureResistance), this, DamageData.DamageType.Magic);
             }
             else if (physicsData.Temperature < criticalMinTemperature && Time.time >= nextTemperatureDamage)
             {
                 nextTemperatureDamage = Time.time + physicsData.Temperature / criticalMinTemperature;
-                localEntity.TakeDamage((criticalMinTemperature - physicsData.Temperature) * (1f - temperatureResistance), localEntity, DamageType.Magic);
+                TakeDamage((criticalMinTemperature - physicsData.Temperature) * (1f - temperatureResistance), this, DamageData.DamageType.Magic);
             }
         }
         private void HandleLiquids()
@@ -140,7 +142,7 @@ namespace Assets.Scripts.Entities
                     switch (liquid.type)
                     {
                         case LiquidContainer.LiquidType.Acid:
-                            localEntity.TakeDamage(liquid.amount / Mathf.Clamp(bloodRef.amount / liquid.amount, 1f, float.PositiveInfinity), localEntity, DamageType.Magic);
+                            TakeDamage(liquid.amount / Mathf.Clamp(bloodRef.amount / liquid.amount, 1f, float.PositiveInfinity), this, DamageData.DamageType.Magic);
                             break;
                         case LiquidContainer.LiquidType.Mending:
                             Heal(liquid.amount);
@@ -167,15 +169,15 @@ namespace Assets.Scripts.Entities
             float dividedDamage = damage / 2f;
 
             float clampedDamageInfluenceFactors = Mathf.Clamp(
-                Mathf.Min(physicsData.Temperature, normalTemperature) / 
+                Mathf.Min(physicsData.Temperature, normalTemperature) /
                 Mathf.Max(physicsData.Temperature, normalTemperature)
-                
-                * 
 
-                (Mathf.Min(bloodRef.amount, normalBloodAmount) / 
+                *
+
+                (Mathf.Min(bloodRef.amount, normalBloodAmount) /
                 Mathf.Max(bloodRef.amount, normalBloodAmount)), 0.1f, 1f);
 
-            Health = Mathf.Max(Health - dividedDamage / clampedDamageInfluenceFactors, 0f);
+            Health = Mathf.Max(Health - dividedDamage / (clampedDamageInfluenceFactors), 0f);
 
             float bloodloss = dividedDamage / BaseHealth;
             float clampedBloodloss = Mathf.Min(bloodloss, 1f);
@@ -193,47 +195,88 @@ namespace Assets.Scripts.Entities
 
                 float timeFactor = Mathf.Min(bloodloss, maxBloodlossPercentage) * (1f - elapsedTime / duration) * Time.deltaTime;
 
-                Health = Mathf.Max(Health - BaseHealth * timeFactor, 0f);
-                liquids.TryPumpout(LiquidContainer.LiquidType.Blood, normalBloodAmount * timeFactor);
+                Health = Mathf.Max(Health - damage * timeFactor, 0f);
+                liquids.Pumpout(LiquidContainer.LiquidType.Blood, normalBloodAmount * timeFactor);
 
                 yield return null;
             }
         }
+        [PunRPC]
+        private void RPC_TakeDamageToOwner(float amount, int attackerViewId, int type)
+        {
+            if (view.IsMine)
+            {
+                List<Entity> es = FindObjectsOfType<Entity>().ToList();
+                Entity attacker = null;
+
+                foreach (Entity e in es)
+                    if (e.TryGetComponent<PhotonView>(out var v))
+                        if (v.ViewID == attackerViewId)
+                            attacker = e;
+
+                if (attacker != null)
+                    TakeDamage(amount, attacker, (DamageData.DamageType)type);
+            }
+        }
+        [PunRPC]
+        private void RPC_HealOwner(float amount)
+        {
+            if (view.IsMine)
+                Heal(amount);
+        }
+
+        public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+        {
+            if (stream.IsWriting)
+            {
+                stream.SendNext(Convert.ToDouble(Health));
+            }
+            else
+            {
+                Health = Convert.ToSingle(stream.ReceiveNext());
+            }
+        }
         public void Heal(float amount)
         {
-            Health = Mathf.Clamp(Health + amount, 0f, BaseHealth);
-            liquids.TrySetLiquidAmount(liquids.GetLiquids.IndexOf(bloodRef), Mathf.Lerp(bloodRef.amount, normalBloodAmount, Mathf.Clamp(Health / BaseHealth, 0f, maxRegenAmount)));
-        }
-        public void TakeDamage(float amount, LocalEntity attacker, DamageType type)
-        {
-            if ((DamageSensors.Contains(type) && !Invulnerable) || type == DamageType.Generic)
+            if (view.IsMine)
             {
-                if (type != DamageType.Generic)
-                    OnDamageTakenForEffects?.Invoke(ref amount, type, attacker);
+                Health = Mathf.Clamp(Health + amount, 0f, BaseHealth);
+                liquids.SetLiquidAmount(liquids.GetLiquids.IndexOf(bloodRef), Mathf.Lerp(bloodRef.amount, normalBloodAmount, Mathf.Clamp(Health / BaseHealth, 0f, maxRegenAmount)));
+            }
+            else
+                view.RPC("RPC_HealOwner", RpcTarget.All, amount);
+        }
+        public void TakeDamage(float amount, Entity attacker, DamageData.DamageType type)
+        {
+            if ((DamageSensors.Contains(type) && !Invulnerable) || DataContainer.DamageProperties[type].IgnoreDefence || DataContainer.DamageProperties[type].InvulnerabilityMitigation > 0f)
+            {
+                if (Invulnerable && DataContainer.DamageProperties[type].InvulnerabilityMitigation > 0f)
+                    amount *= DataContainer.DamageProperties[type].InvulnerabilityMitigation;
 
-                OnDamageTaken?.Invoke(amount);
-                StartCoroutine(ApplyBloodloss(amount));
+                if (view.IsMine)
+                {
+                    if (!DataContainer.DamageProperties[type].IgnoreDefence)
+                        OnDamageTakenForEffects?.Invoke(ref amount, type, attacker);
+
+                    OnDamageTaken?.Invoke(amount);
+
+                    StartCoroutine(ApplyBloodloss(amount));
+                }
+                else
+                    view.RPC("RPC_TakeDamageToOwner", RpcTarget.All, amount, attacker.GetComponent<PhotonView>().ViewID, (int)type);
             }
         }
         public void Kill()
         {
-            localEntity.TakeDamage(Health, localEntity, DamageType.Generic);
+            TakeDamage(Health, this, DamageData.DamageType.Generic);
         }
         public void ToggleInvulnerability(bool state) => Invulnerable = state;
-    }
-
-    public enum DamageType : byte
-    {
-        Generic,
-        Gravity,
-        Kenetic,
-        Magic,
     }
 
     public enum EntityType : byte
     {
         Player,
-        Default,
+        Enemy,
         Nextbot,
         Unmatched
     }

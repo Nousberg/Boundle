@@ -17,7 +17,7 @@ namespace Assets.Scripts.Ui.Inventory
 
         private void Start()
         {
-            foreach (var obj in spawnManager.objects)
+            foreach (var obj in spawnManager.SummonableObjects)
             {
                 GameObject icon = new GameObject("Icon");
                 icon.transform.parent = MatchParent(obj.Category);

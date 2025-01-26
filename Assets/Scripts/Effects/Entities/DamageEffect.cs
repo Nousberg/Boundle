@@ -9,9 +9,9 @@ namespace Assets.Scripts.Effects
         public DamageEffect(Entity target, int duration, float amplifier, bool infinite = false) : base(duration, amplifier, infinite)
         {
             this.target = target;
-            //this.target.OnDamageTakenForEffects += ModifyDamage;
+            this.target.OnDamageTakenForEffects += ModifyDamage;
         }
 
-        public abstract void ModifyDamage(ref float amount, DamageType type, Entity attacker);
+        public abstract void ModifyDamage(ref float amount, DamageData.DamageType type, Entity attacker);
     }
 }

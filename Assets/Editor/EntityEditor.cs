@@ -14,8 +14,6 @@ public class EntityEditor : Editor
         GUI.enabled = Application.isPlaying && entity.Health > 0f;
 
         if (GUILayout.Button("Kill Entity"))
-        {
             entity.Kill();
-        }
     }
 }

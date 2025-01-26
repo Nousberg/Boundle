@@ -3,6 +3,7 @@ using Assets.Scripts.Entities;
 using Assets.Scripts.Entities.Liquids;
 using Assets.Scripts.Inventory.DynamicData;
 using Assets.Scripts.Inventory.Scriptables;
+using Photon.Pun;
 using System;
 using UnityEngine;
 
@@ -51,39 +52,39 @@ namespace Assets.Scripts.Inventory
                 {
                     Entity target = hit.collider.GetComponent<Entity>();
 
-                    //if (target != null)
-                    //{
-                    //    float damageModifier = 1f;
-                    //
-                    //    if (hit.collider.TryGetComponent<LiquidContainer>(out var liquids))
-                    //    {
-                    //        foreach (var liquid in liquids.GetLiquids)
-                    //            switch (liquid.type)
-                    //            {
-                    //                case LiquidContainer.LiquidType.Water:
-                    //                    damageModifier *= 0.75f;
-                    //                    break;
-                    //                case LiquidContainer.LiquidType.Acid:
-                    //                    damageModifier *= 0.25f;
-                    //                    break;
-                    //            }
-                    //    }
-                    //
-                    //    target.TakeDamage(damageModifier * damage /
-                    //        Mathf.Clamp(
-                    //            Mathf.Abs(
-                    //                Mathf.Clamp(
-                    //                    baseWeaponData.Range -
-                    //                    Vector3.Distance(transform.position, hit.transform.position),
-                    //                    1f,
-                    //                    float.PositiveInfinity) / baseWeaponData.Range),
-                    //        1f,
-                    //        float.PositiveInfinity),
-                    //    carrier,
-                    //    baseWeaponData.DamageType);
-                    //}
+                    if (target != null)
+                    {
+                        if (hit.collider.TryGetComponent<LiquidContainer>(out var liquids))
+                        {
+                            foreach (var liquid in liquids.GetLiquids)
+                                switch (liquid.type)
+                                {
+                                    case LiquidContainer.LiquidType.Water:
+                                        damage *= 0.75f;
+                                        break;
+                                    case LiquidContainer.LiquidType.Acid:
+                                        damage *= 0.25f;
+                                        break;
+                                }
+                        }
+                    
+                        target.TakeDamage(damage /
+                            Mathf.Clamp(
+                                Mathf.Abs(
+                                    Mathf.Clamp(
+                                        baseWeaponData.Range -
+                                        Vector3.Distance(transform.position, hit.transform.position),
+                                        1f,
+                                        float.PositiveInfinity) / baseWeaponData.Range),
+                            1f,
+                            float.PositiveInfinity),
+                        carrier,
+                        baseWeaponData.DamageType);
+                    }
 
-                    if (hit.collider.TryGetComponent<Rigidbody>(out var rb))
+                    if (hit.collider.TryGetComponent<PhotonRigidbodyView>(out var rbV))
+                        rbV.photonView.RPC("AddForce", RpcTarget.All, -hit.normal * baseWeaponData.PushStrenght);
+                    else if (hit.collider.TryGetComponent<Rigidbody>(out var rb))
                         rb.AddForce(-hit.normal * baseWeaponData.PushStrenght);
                 }
             }

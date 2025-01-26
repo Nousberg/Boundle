@@ -1,4 +1,6 @@
+using Assets.Scripts.Core.Input_System;
 using Assets.Scripts.Spawning;
+using Photon.Pun;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -7,36 +9,39 @@ namespace Assets.Scripts.Inventory
     public class ToolgunDataController : ItemDataController
     {
         [Header("References")]
-        [SerializeField] private Summonables summoner;
         [SerializeField] private Transform holdPoint;
         [SerializeField] private Transform scanPos;
 
         [Header("Properties")]
         [SerializeField] private LayerMask holdableLayer;
+        [SerializeField] private float holdedObjVelocityStabilizer;
         [SerializeField] private float holdedObjFollowSpeed;
         [SerializeField] private float holdPointScrollSpeed;
         [SerializeField] private float scanDistance;
 
-        public static bool IsHolding { get; private set; }
+        public InputState inputSource;
 
-        private int selectedObjectId;
+        private InputMachine inputMachine;
+        private PhotonRigidbodyView rbView;
+        private Summonables summoner;
+        private int selectedObjectId = 4;
         private bool holdedObjectGravityUse;
-        private Vector3 initHoldPoint;
         private Rigidbody holdedObjectRb;
         private Transform holdedObject;
 
         public void SelectObjectToSpawn(int id) => selectedObjectId = id;
 
-        private void Start()
+        public void Init(Summonables summoner, InputMachine inputMachine)
         {
-            initHoldPoint = holdPoint.localPosition;
+            this.inputMachine = inputMachine;
+            this.summoner = summoner;
         }
 
         private void Update()
         {
-            if (Input.mouseScrollDelta.y != 0f && holdedObject != null && holdedObjectRb != null)
+            if (inputSource.VectorBinds[Core.InputSystem.InputHandler.InputBind.MOUSEWHEEL].y != 0f && holdedObject != null && holdedObjectRb != null)
             {
-                holdPoint.localPosition = new Vector3(0f, 0f, holdPoint.localPosition.z + Input.mouseScrollDelta.y * holdPointScrollSpeed);
+                holdPoint.localPosition = new Vector3(0f, 0f, holdPoint.localPosition.z + inputSource.VectorBinds[Core.InputSystem.InputHandler.InputBind.MOUSEWHEEL].y * holdPointScrollSpeed);
             }
             if (Input.GetMouseButtonDown(2))
             {
@@ -53,9 +58,22 @@ namespace Assets.Scripts.Inventory
 
                 if (Physics.Raycast(scanPos.position, scanPos.forward, out hit, scanDistance, holdableLayer, QueryTriggerInteraction.Ignore))
                 {
-                    if (hit.collider.TryGetComponent<Rigidbody>(out var rb))
+                    if (hit.collider.TryGetComponent<PhotonRigidbodyView>(out var rbV))
                     {
-                        IsHolding = true;
+                        inputMachine.SwitchBindState(Core.InputSystem.InputHandler.InputBind.MOUSEWHEEL, inputMachine.GetStates.IndexOf(inputSource));
+
+                        holdedObject = hit.collider.transform;
+                        rbView = rbV;
+
+                        holdedObjectGravityUse = rbView.m_Body.useGravity;
+                        holdPoint.position = hit.point;
+
+                        rbView.photonView.RPC("SetGravityUse", RpcTarget.All, false);
+                    }
+                    else if (hit.collider.TryGetComponent<Rigidbody>(out var rb))
+                    {
+                        inputMachine.SwitchBindState(Core.InputSystem.InputHandler.InputBind.MOUSEWHEEL, inputMachine.GetStates.IndexOf(inputSource));
+
                         holdedObject = hit.collider.transform;
                         holdedObjectRb = rb;
 
@@ -71,26 +89,35 @@ namespace Assets.Scripts.Inventory
                 RaycastHit hit;
 
                 if (Physics.Raycast(scanPos.position, scanPos.forward, out hit, scanDistance, holdableLayer, QueryTriggerInteraction.Ignore))
-                    Destroy(hit.collider.gameObject);
+                    PhotonNetwork.Destroy(hit.collider.gameObject);
             }
-            else if (Input.GetMouseButton(0) && holdedObject != null && holdedObjectRb != null)
+            else if (Input.GetMouseButton(0) && holdedObject != null && (holdedObjectRb != null || rbView != null))
             {
-                float pointMg = holdPoint.position.magnitude;
-                float objMg = holdedObject.position.magnitude;
-
-                holdedObjectRb.velocity = (holdPoint.position - holdedObject.position).normalized * Mathf.Lerp(0f, holdedObjFollowSpeed, 1f - (Mathf.Min(objMg, pointMg) / Mathf.Max(objMg, pointMg))) * Time.deltaTime;
+                if (rbView == null)
+                    holdedObject.position = Vector3.Lerp(holdedObject.position, holdPoint.position, holdedObjFollowSpeed * Time.deltaTime);
+                else
+                    rbView.photonView.RPC("SetVelocity", RpcTarget.All, (holdPoint.position - holdedObject.position) * holdedObjVelocityStabilizer * Time.deltaTime);
             }
             else
             {
-                if (holdedObjectRb != null)
-                    holdedObjectRb.useGravity = holdedObjectGravityUse;
+                if (holdedObjectRb != null || rbView != null)
+                {
+                    if (rbView == null)
+                    {
+                        holdedObjectRb.useGravity = holdedObjectGravityUse;
+                        holdedObjectRb.velocity = (holdPoint.position - holdedObject.position) * holdedObjVelocityStabilizer * Time.deltaTime;
+                    }
+                    else
+                    {
+                        rbView.photonView.RPC("SetGravityUse", RpcTarget.All, holdedObjectGravityUse);
+                    }
+                }
 
+                rbView = null;
                 holdedObjectRb = null;
                 holdedObject = null;
 
-                holdPoint.localPosition = initHoldPoint;
-
-                IsHolding = false;
+                inputMachine.SetBindActiveForEveryState(Core.InputSystem.InputHandler.InputBind.MOUSEWHEEL, false);
             }
         }
     }

@@ -1,8 +1,11 @@
 ﻿using UnityEngine;
+using Photon.Pun;
+using System.Collections;
 
 namespace Assets.Scripts.Core.Environment
 {
-    public class PhysicsPropertiesContainer : MonoBehaviour
+    [RequireComponent(typeof(PhotonView))]
+    public class PhysicsPropertiesContainer : MonoBehaviourPun, IPunObservable
     {
         public const float MIN_TEMPERATURE = -273.15f;
 
@@ -10,6 +13,20 @@ namespace Assets.Scripts.Core.Environment
         [SerializeField] private float temperatureCombineDistance;
 
         [field: SerializeField] public float Temperature { get; private set; }
+
+        private PhotonView view => GetComponent<PhotonView>();
+
+        public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+        {
+            if (stream.IsWriting)
+            {
+                stream.SendNext(Temperature);
+            }
+            else
+            {
+                Temperature = (float)stream.ReceiveNext();
+            }
+        }
 
         private void FixedUpdate()
         {
@@ -22,19 +39,20 @@ namespace Assets.Scripts.Core.Environment
                     PhysicsPropertiesContainer container = coll.GetComponent<PhysicsPropertiesContainer>();
 
                     if (container != null)
-                        container.CombineTemperature((container.Temperature + Temperature / Mathf.Clamp(Vector3.Distance(transform.position, container.transform.position) * (1f - temperatureCombineDistanceDecrease), 1f, float.PositiveInfinity)) / 2f);
+                        CombineTemperature((container.Temperature + Temperature / Mathf.Clamp(Vector3.Distance(transform.position, container.transform.position) * (1f - temperatureCombineDistanceDecrease), 1f, float.PositiveInfinity)) / 2f);
                 }
             }
         }
+
+        [PunRPC]
         public void CombineTemperature(float value, bool deltaFactor = false)
         {
             Temperature = Mathf.Clamp(
-
                 Mathf.Lerp(Temperature, value, deltaFactor ? 0.5f * Time.deltaTime : 0.5f),
 
                 MIN_TEMPERATURE,
                 float.PositiveInfinity
-            );
+                );
         }
     }
 }

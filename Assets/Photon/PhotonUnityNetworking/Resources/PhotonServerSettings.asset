@@ -28,8 +28,8 @@ MonoBehaviour:
     AuthMode: 0
     EnableLobbyStatistics: 0
     NetworkLogging: 1
-  DevRegion: tr
-  PunLogging: 2
+  DevRegion: 
+  PunLogging: 0
   EnableSupportLogger: 0
   RunInBackground: 1
   StartInOfflineMode: 0
@@ -41,6 +41,31 @@ MonoBehaviour:
   - RespawnSpaceship
   - TakeDamage
   - SyncHealth
+  - ShowMessage
+  - DeleteMessage
+  - RPC_SetHealth
+  - SetPlayersSpawnPoint
+  - RPC_TakeDamage
+  - RPC_TakeDamageToOwner
+  - RPC_SetOwnerHealth
+  - RPC_HealOwner
+  - RPC_TryTransfer
+  - RPC_Transfer
+  - RPC_SendTransferResult
+  - RPC_CombineTemperature
+  - RPC_AddNewLiquid
+  - RPC_SetLiquidAmount
+  - SyncVelocity
+  - SetGravityUse
+  - SetVelocity
+  - SetPosition
+  - AddForce
+  - Kick
+  - CombineTemperature
+  - SetRigths
+  - SetNametag
+  - RPC_ApplyEffect
+  - RPC_RemoveEffect
   DisableAutoOpenWizard: 1
-  ShowSettings: 0
-  DevRegionSetOnce: 0
+  ShowSettings: 1
+  DevRegionSetOnce: 1

@@ -14,7 +14,7 @@ namespace Assets.Scripts.Entities.Abilities
         private Entity player => GetComponent<Entity>();
         private MovementController playerMovement => GetComponent<MovementController>();
 
-        private void Start() => player.OnDamageTaken += CheckDamageConditions;
+        public void Init() => player.OnDamageTaken += CheckDamageConditions;
 
         protected override void ToggleAbility()
         {

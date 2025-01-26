@@ -5,8 +5,8 @@ namespace Assets.Scripts.Entities.Liquids
 {
     public class Needle : MonoBehaviour
     {
-        public event Action<Collision> OnInjected;
+        public event Action<Collider> OnInjected;
 
-        private void OnCollisionStay(Collision collision) => OnInjected?.Invoke(collision);
+        private void OnTriggerStay(Collider other) => OnInjected?.Invoke(other);
     }
 }

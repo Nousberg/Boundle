@@ -1,6 +1,5 @@
 ﻿using Assets.Scripts.Entities;
 using Assets.Scripts.Saving;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 

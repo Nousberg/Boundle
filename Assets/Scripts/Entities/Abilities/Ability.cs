@@ -1,6 +1,8 @@
 ﻿using Assets.Scripts.Entities.Abilities.Scriptables;
+using Photon.Pun;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Assets.Scripts.Entities.Abilities
 {
@@ -8,22 +10,27 @@ namespace Assets.Scripts.Entities.Abilities
     {
         [SerializeField] private AbilityData data;
 
+        private PhotonView view => GetComponent<PhotonView>();
+
         private bool toggled;
 
         private void Update()
         {
-            if (Input.GetKeyDown(data.KeyBind))
+            if (view.IsMine)
             {
-                toggled = !toggled;
+                if (Keyboard.current[data.KeyBind].wasPressedThisFrame)
+                {
+                    toggled = !toggled;
+
+                    if (toggled)
+                        StartCoroutine(nameof(AbilityActivator));
+                    if (!toggled)
+                        OnDeactivate();
+                }
 
                 if (toggled)
-                    StartCoroutine(nameof(AbilityActivator));
-                if (!toggled)
-                    OnDeactivate();
+                    SafeUpdate();
             }
-
-            if (toggled)
-                SafeUpdate();
         }
 
         public void Activate()

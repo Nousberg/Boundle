@@ -1,5 +1,9 @@
-﻿using Assets.Scripts.Inventory.DynamicData;
+﻿using Assets.Scripts.Core.Input_System;
+using Assets.Scripts.Core.InputSystem;
+using Assets.Scripts.Inventory.DynamicData;
+using Photon.Pun;
 using UnityEngine;
+using static UnityEngine.InputManagerEntry;
 
 namespace Assets.Scripts.Inventory.View
 {
@@ -14,50 +18,63 @@ namespace Assets.Scripts.Inventory.View
         [SerializeField] private KeyCode dropBind;
         [SerializeField] private float holdDist;
 
-        private InventoryDataController inventory => GetComponent<InventoryDataController>();
+        public InputState inputSource;
 
-        private void Start()
+        private InventoryDataController inventory => GetComponent<InventoryDataController>();
+        private PhotonView view => GetComponent<PhotonView>();
+
+        public void Init()
         {
+            inputSource.InputRecieved += Equip;
+            inputSource.InputRecieved += Drop;
+
             inventory.OnItemSwitched += ShowCurrentItem;
             inventory.OnItemAdded += ShowCurrentItem;
             inventory.OnItemRemoved += ShowCurrentItem;
         }
+        private void Equip(InputHandler.InputBind bind)
+        {
+            if (bind != InputHandler.InputBind.EQUIP)
+                return;
+
+            RaycastHit hit;
+            if (Physics.Raycast(holdPos.position, holdPos.forward, out hit, holdDist))
+            {
+                DroppedItem item = hit.collider.GetComponent<DroppedItem>();
+
+                if (item != null && inventory.TryAddItem(item.Data))
+                    Destroy(item.gameObject);
+            }
+        }
+        private void Drop(InputHandler.InputBind bind)
+        {
+            if (bind != InputHandler.InputBind.DROP)
+                return;
+
+            DynamicItemData data = inventory.GetItems[inventory.CurrentItemIndex];
+
+            if (inventory.TryRemoveItem(inventory.CurrentItemIndex))
+            {
+                GameObject instantiatedItem = Instantiate(data.data.prefab, holdPos.position, holdPos.rotation);
+                instantiatedItem.AddComponent<DroppedItem>().Init(data);
+                instantiatedItem.AddComponent<Rigidbody>();
+                instantiatedItem.AddComponent<BoxCollider>().size = data.data.ColliderScale;
+            }
+        }
         private void Update()
         {
-            if (Input.mouseScrollDelta.y != 0f && !ToolgunDataController.IsHolding)
-            {
-                int targetIndex = inventory.CurrentItemIndex + (int)Input.mouseScrollDelta.y;
-
-                if (targetIndex < 0)
-                    targetIndex = inventory.GetItems.Count - 1;
-                else if (targetIndex >= inventory.GetItems.Count)
-                    targetIndex = 0;
-
-                inventory.SwitchItem(targetIndex);
-            }
-            if (Input.GetKeyDown(equipBind))
-            {
-                RaycastHit hit;
-                if (Physics.Raycast(holdPos.position, holdPos.forward, out hit, holdDist))
+            if (view.IsMine)
+                if (inputSource.VectorBinds[InputHandler.InputBind.MOUSEWHEEL].y != 0f)
                 {
-                    DroppedItem item = hit.collider.GetComponent<DroppedItem>();
+                    int targetIndex = inventory.CurrentItemIndex + (int)Input.mouseScrollDelta.y;
 
-                    if (item != null && inventory.TryAddItem(item.Data))
-                        Destroy(item.gameObject);
-                }
-            }
-            if (Input.GetKeyDown(dropBind))
-            {
-                DynamicItemData data = inventory.GetItems[inventory.CurrentItemIndex];
+                    if (targetIndex < 0)
+                        targetIndex = inventory.GetItems.Count - 1;
+                    else if (targetIndex >= inventory.GetItems.Count)
+                        targetIndex = 0;
 
-                if (inventory.TryRemoveItem(inventory.CurrentItemIndex))
-                {
-                    GameObject instantiatedItem = Instantiate(data.data.prefab, holdPos.position, holdPos.rotation);
-                    instantiatedItem.AddComponent<DroppedItem>().Init(data);
-                    instantiatedItem.AddComponent<Rigidbody>();
-                    instantiatedItem.AddComponent<BoxCollider>().size = data.data.ColliderScale;
+                    inventory.SwitchItem(targetIndex);
                 }
-            }
         }
         private void ShowCurrentItem()
         {

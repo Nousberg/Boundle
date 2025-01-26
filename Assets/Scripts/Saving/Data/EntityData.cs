@@ -7,10 +7,10 @@ namespace Assets.Scripts.Saving
     {
         public float currentHealth, currentBlood, baseHealth;
         public bool invulnerable;
-        public List<DamageType> damageSensors = new List<DamageType>();
+        public List<DamageData.DamageType> damageSensors = new List<DamageData.DamageType>();
         public List<EffectData> effects = new List<EffectData>();
 
-        public EntityData(float currentHealth, float currentBlood, float baseHealth, bool invulnerable, List<DamageType> damageSensors, List<EffectData> effects)
+        public EntityData(float currentHealth, float currentBlood, float baseHealth, bool invulnerable, List<DamageData.DamageType> damageSensors, List<EffectData> effects)
         {
             this.currentBlood = currentBlood;
             this.currentHealth = currentHealth;

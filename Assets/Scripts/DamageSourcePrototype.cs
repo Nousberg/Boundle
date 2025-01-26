@@ -10,7 +10,7 @@ namespace Assets.Scripts
     {
         [SerializeField] public float damageFrequency;
         [SerializeField] public float damageAmount;
-        [SerializeField] public DamageType damageType;
+        [SerializeField] public DamageData.DamageType damageType;
 
         private float currentDamageTime;
         private Entity thisEntity => GetComponent<Entity>();

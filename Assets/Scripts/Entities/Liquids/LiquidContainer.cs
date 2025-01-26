@@ -1,11 +1,13 @@
 using System;
+using Photon.Pun;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 namespace Assets.Scripts.Entities.Liquids
 {
-    public class LiquidContainer : MonoBehaviour
+    [RequireComponent(typeof(PhotonView))]
+    public class LiquidContainer : MonoBehaviourPun
     {
         [field: SerializeField] public float Capacity { get; private set; }
         [SerializeField] private List<Liquid> liquids = new List<Liquid>();
@@ -15,68 +17,28 @@ namespace Assets.Scripts.Entities.Liquids
 
         public event Action OnLiquidsChanged;
 
-        public void Transfer(LiquidContainer target, float amount)
+        private PhotonView view => GetComponent<PhotonView>();
+        private bool liquidChangeResult;
+
+        [PunRPC]
+        private void RPC_Transfer(int containerInstanceId, float amount)
         {
-            if (amount <= 0f || amount > Weight)
+            if (view.IsMine)
+            {
+                LiquidContainer container = FindObjectsOfType<LiquidContainer>().ToList()
+                    .Find(n => n.gameObject.GetInstanceID() == containerInstanceId);
+
+                if (container != null)
+                    Transfer(container, amount);
+            }
+        }
+
+        [PunRPC]
+        private void RPC_SetLiquidAmount(int liquidIndex, float amount)
+        {
+            if (liquidIndex < 0 || liquidIndex >= liquids.Count ||
+                Weight - liquids[liquidIndex].amount + amount > Capacity)
                 return;
-
-            List<Liquid> liquidsToRemove = new List<Liquid>();
-
-            foreach (var liquid in liquids)
-            {
-                if (!target.TryInject(liquid.type, Mathf.Clamp(amount, 0f, liquid.amount)))
-                    return;
-
-                liquid.amount -= Mathf.Clamp(amount, 0f, liquid.amount);
-
-                if (liquid.amount <= 0f)
-                    liquidsToRemove.Add(liquid);
-            }
-
-            foreach (var liquid in liquidsToRemove)
-                liquids.Remove(liquid);
-
-            OnLiquidsChanged?.Invoke();
-        }
-        public bool TryInject(LiquidType liquid, float amount)
-        {
-            if (amount <= 0f || Weight + amount > Capacity)
-                return false;
-
-            Liquid findedLiquid = liquids.Find(n => n.type == liquid);
-
-            if (findedLiquid != null)
-            {
-                if (Weight + findedLiquid.amount > Capacity)
-                    return false;
-
-                findedLiquid.amount += amount;
-            }
-            else
-                liquids.Add(new Liquid(liquid, amount));
-
-            OnLiquidsChanged?.Invoke();
-            return true;
-        }
-        public bool TryPumpout(LiquidType liquid, float amount)
-        {
-            Liquid findedLiquid = liquids.Find(n => n.type == liquid);
-
-            if (findedLiquid == null || findedLiquid.amount < amount || amount <= 0f)
-                return false;
-
-            findedLiquid.amount -= amount;
-
-            if (findedLiquid.amount <= 0f)
-                liquids.Remove(findedLiquid);
-
-            OnLiquidsChanged?.Invoke();
-            return true;
-        }
-        public bool TrySetLiquidAmount(int liquidIndex, float amount)
-        {
-            if (liquidIndex < 0 || liquidIndex >= liquids.Count || Weight - liquids[liquidIndex].amount + amount > Capacity)
-                return false;
 
             liquids[liquidIndex].amount = amount;
 
@@ -84,7 +46,106 @@ namespace Assets.Scripts.Entities.Liquids
                 liquids.RemoveAt(liquidIndex);
 
             OnLiquidsChanged?.Invoke();
-            return true;
+        }
+
+        [PunRPC]
+        private void RPC_AddNewLiquid(int liquidType, float amount)
+        {
+            if (Weight + amount > Capacity)
+                return;
+
+            liquids.Add(new Liquid((LiquidType)liquidType, amount));
+            OnLiquidsChanged?.Invoke();
+        }
+
+        [PunRPC]
+        private void RPC_SendTransferResult(bool res) => liquidChangeResult = res;
+
+        public void SetLiquidAmount(int liquidIndex, float amount)
+        {
+            if (!view.IsMine)
+            {
+                view.RPC("RPC_SetLiquidAmount", RpcTarget.All, liquidIndex, amount);
+                return;
+            }
+
+            if (liquidIndex < 0 || liquidIndex >= liquids.Count ||
+                Weight - liquids[liquidIndex].amount + amount > Capacity)
+                return;
+
+            liquids[liquidIndex].amount = amount;
+
+            if (amount <= 0f)
+                liquids.RemoveAt(liquidIndex);
+
+            OnLiquidsChanged?.Invoke();
+        }
+
+        public void Transfer(LiquidContainer target, float amount)
+        {
+            if (!view.IsMine)
+            {
+                view.RPC("RPC_Transfer", RpcTarget.All, target.gameObject.GetInstanceID(), amount);
+                return;
+            }
+
+            if (amount <= 0f || amount > Weight)
+                return;
+
+            List<Liquid> liquidsToProcess = new List<Liquid>(liquids);
+            foreach (var liquid in liquidsToProcess)
+            {
+                float transferAmount = Mathf.Clamp(amount, 0f, liquid.amount);
+                int liquidIndex = liquids.IndexOf(liquid);
+
+                target.Inject(liquid.type, transferAmount, view);
+                SetLiquidAmount(liquidIndex, liquid.amount - transferAmount);
+            }
+        }
+
+        public void Inject(LiquidType liquidType, float amount, PhotonView initiator)
+        {
+            if (amount <= 0f || Weight + amount > Capacity)
+            {
+                initiator.RPC("RPC_SendTransferResult", RpcTarget.All, false);
+                return;
+            }
+
+            int existingIndex = liquids.FindIndex(n => n.type == liquidType);
+            if (existingIndex != -1)
+            {
+                float newAmount = liquids[existingIndex].amount + amount;
+                if (Weight - liquids[existingIndex].amount + newAmount > Capacity)
+                {
+                    initiator.RPC("RPC_SendTransferResult", RpcTarget.All, false);
+                    return;
+                }
+
+                SetLiquidAmount(existingIndex, newAmount);
+            }
+            else
+            {
+                if (view.IsMine)
+                {
+                    liquids.Add(new Liquid(liquidType, amount));
+                    OnLiquidsChanged?.Invoke();
+                }
+                else
+                {
+                    view.RPC("RPC_AddNewLiquid", RpcTarget.All, (int)liquidType, amount);
+                }
+            }
+
+            initiator.RPC("RPC_SendTransferResult", RpcTarget.All, true);
+        }
+
+        public void Pumpout(LiquidType liquidType, float amount)
+        {
+            int liquidIndex = liquids.FindIndex(n => n.type == liquidType);
+            if (liquidIndex == -1 || liquids[liquidIndex].amount < amount || amount <= 0f)
+                return;
+
+            SetLiquidAmount(liquidIndex, liquids[liquidIndex].amount - amount);
         }
 
         public enum LiquidType : byte

@@ -22,14 +22,14 @@ MonoBehaviour:
     type: 3}
   <MyType>k__BackingField: 1
   <DamageType>k__BackingField: 2
-  <Damage>k__BackingField: 10
-  <PushStrenght>k__BackingField: 50
+  <Damage>k__BackingField: 1
+  <PushStrenght>k__BackingField: 250
   <Spread>k__BackingField: 0.1
   <Recoil>k__BackingField: 25
-  <FireRate>k__BackingField: 0.75
+  <FireRate>k__BackingField: 2
   <ReloadDuration>k__BackingField: 4
   <Range>k__BackingField: 100
-  <BulletsPerShot>k__BackingField: 12
+  <BulletsPerShot>k__BackingField: 50
   <BaseAmmo>k__BackingField: 999
   <FireSound>k__BackingField: {fileID: 0}
   <ReloadSound>k__BackingField: {fileID: 0}

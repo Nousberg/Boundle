@@ -12,7 +12,7 @@ namespace Assets.Scripts.Effects
 
         public override void ModifyDamage(ref float damage)
         {
-            damage *= 1f - Mathf.Clamp01(Amplifier);
+            damage *= Mathf.Clamp01(Amplifier / 100f);
         }
         public override void CombineEffects(Effect effect)
         {

@@ -12,8 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d892a4238e5c1946a6b0ee470d8147c, type: 3}
   m_Name: Water
   m_EditorClassIdentifier: 
-  <AppliedEffects>k__BackingField:
-  - effectType: 0
-    infinite: 1
-    amplifier: 250
-    duration: 8000
+  <AppliedEffects>k__BackingField: []

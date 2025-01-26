@@ -14,20 +14,18 @@ namespace Assets.Scripts.Entities.Liquids
 
         private LiquidContainer liquids => GetComponent<LiquidContainer>();
 
-        private void Start()
+        public void Init()
         {
             needle.OnInjected += HandleInject;
             Physics.IgnoreCollision(needle.GetComponent<Collider>(), GetComponent<Collider>(), true);
         }
 
-        private void HandleInject(Collision collision)
+        private void HandleInject(Collider collision)
         {
-            LiquidContainer container = collision.gameObject.GetComponent<LiquidContainer>();
+            LiquidContainer container = collision.GetComponent<LiquidContainer>();
 
             if (container != null)
-            {
                 liquids.Transfer(container, liquids.Weight * liquidTransferPercenrage * Time.deltaTime);
-            }
         }
     }
 }

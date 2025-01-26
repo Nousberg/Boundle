@@ -8,7 +8,7 @@ namespace Assets.Scripts.Inventory.Scriptables
     {
         [field: Header("Weapon Properties")]
         [field: SerializeField] public WeaponType MyType { get; private set; }
-        [field: SerializeField] public DamageType DamageType { get; private set; }
+        [field: SerializeField] public DamageData.DamageType DamageType { get; private set; }
         [field: SerializeField] public float Damage { get; private set; }
         [field: SerializeField] public float PushStrenght { get; private set; }
         [field: SerializeField] public float Spread { get; private set; }

@@ -1,8 +1,11 @@
-﻿using Assets.Scripts.Entities;
+﻿using Assets.Scripts.Core.Input_System;
+using Assets.Scripts.Core.InputSystem;
+using Assets.Scripts.Entities;
 using Assets.Scripts.Inventory;
 using Assets.Scripts.Inventory.Scriptables;
 using Assets.Scripts.Inventory.View;
 using Assets.Scripts.Ui.Player;
+using Photon.Pun;
 using System.Collections;
 using UnityEngine;
 
@@ -14,10 +17,10 @@ namespace Assets.Scripts.Movement
     public class PlayerCameraLogic : MonoBehaviour
     {
         [field: Header("References")]
-        [SerializeField] private TouchscreenJoystick joystick;
         [SerializeField] private Camera cam;
 
         [Header("Camera Properties")]
+        [SerializeField] private float keyInfluenceSpeed;
         [Min(0f)][SerializeField] private float Sensitivity;
         [SerializeField] private float zWalkLookOffset;
         [SerializeField] private float zLookOffset;
@@ -36,10 +39,13 @@ namespace Assets.Scripts.Movement
         [SerializeField] private Vector3 dynamicRotAmplitudeFactor;
         [SerializeField] private float dynamicRotFrequencyFactor;
 
+        public InputState inputSource;
+
         private PlayerMovementLogic playerMovement => GetComponent<PlayerMovementLogic>();
         private InventoryDataController inventory => GetComponent<InventoryDataController>();
         private Entity player => GetComponent<Entity>();
         private Rigidbody rb => GetComponent<Rigidbody>();
+        private PhotonView view => GetComponent<PhotonView>();
 
         private float xRot;
         private float zRot;
@@ -63,9 +69,7 @@ namespace Assets.Scripts.Movement
         private Quaternion targetRot;
         private Transform cameraTransform;
 
-        private Vector2? previousTouchPosition;
-
-        private void Start()
+        public void Init()
         {
             defaultFov = cam.fieldOfView;
             cameraTransform = cam.transform;
@@ -76,47 +80,33 @@ namespace Assets.Scripts.Movement
         }
         private void Update()
         {
-            keyInput = Application.platform == RuntimePlatform.Android && joystick.joystickInput.sqrMagnitude > 0f ? joystick.joystickInput : new Vector3(Input.GetAxis("Horizontal"), 0f, Input.GetAxis("Vertical"));
-
-            if (Application.platform == RuntimePlatform.Android && Input.touchCount > 0)
+            if (view.IsMine)
             {
-                Touch touch = Input.GetTouch(0);
-                if (previousTouchPosition.HasValue)
-                {
-                    Vector2 touchDelta = touch.position - previousTouchPosition.Value;
-                    mouseInput = touch.position.x > Screen.width / 2 ? touchDelta * Sensitivity : Vector2.zero;
-                }
-                previousTouchPosition = touch.position;
+                keyInput = new Vector3(inputSource.VectorBinds[InputHandler.InputBind.WASD].x, 0f, inputSource.VectorBinds[InputHandler.InputBind.WASD].y);
+                mouseInput = inputSource.VectorBinds[InputHandler.InputBind.LOOK] * Sensitivity;
 
-                if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
-                    previousTouchPosition = null;
+                StartCoroutine("GenerateNoise");
+                noiseRot = Vector3.Lerp(noiseRot, generatedNoise, noiseRotLerpSpeed * Time.deltaTime);
+
+                xRot -= mouseInput.y + recoilOffset;
+                dynamicOffset = _dynamicRotAmplitudeFactor * Mathf.Cos(Time.time * _dynamicRotFreqerencyFactor);
+                zRot = Mathf.Lerp(zRot, (-mouseInput.x * zLookOffset) + (keyInput.x * zWalkLookOffset), zLookOffsetSpeed * Time.deltaTime);
+
+                transform.Rotate(Vector3.up * mouseInput.x);
+                targetRot = Quaternion.Euler(Mathf.Clamp(xRot + jumpCameraOffset * rb.velocity.y, -maxCamRotY, maxCamRotY), 0f, -zRot) * Quaternion.Euler(dynamicOffset * (playerMovement.IsWaking ? 1f : 0f)) * Quaternion.Euler(noiseRot);
+
+                cameraTransform.transform.localRotation = Quaternion.Slerp(cam.transform.localRotation, targetRot, camRotLerpSpeed * Time.deltaTime);
+                cam.fieldOfView = Mathf.Clamp(Mathf.Lerp(cam.fieldOfView, defaultFov + playerMovement.CurrentVelocity * fovOffsetAmount, fovLerpSpeed * Time.deltaTime), 0f, maxFov);
+
+                healthAspect = Mathf.Max(player.Health / player.BaseHealth, 0.7f);
+                velocity = Mathf.Clamp(playerMovement.CurrentVelocity, 0.4f, 1f);
+                noiseRotLerpSpeed = noiseLerpSpeed / healthAspect * velocity;
+                _dynamicRotAmplitudeFactor = dynamicRotAmplitudeFactor / healthAspect * velocity;
+                _dynamicRotFreqerencyFactor = dynamicRotFrequencyFactor / healthAspect * velocity;
+                curNoiseRot = noiseRotation / healthAspect * velocity;
+
+                recoilOffset = 0f;
             }
-            else
-            {
-                mouseInput = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * Sensitivity;
-            }
-
-            StartCoroutine("GenerateNoise");
-            noiseRot = Vector3.Lerp(noiseRot, generatedNoise, noiseRotLerpSpeed * Time.deltaTime);
-
-            xRot -= mouseInput.y + recoilOffset;
-            dynamicOffset = _dynamicRotAmplitudeFactor * Mathf.Cos(Time.time * _dynamicRotFreqerencyFactor);
-            zRot = Mathf.Lerp(zRot, (-mouseInput.x * zLookOffset) + (keyInput.x * zWalkLookOffset), zLookOffsetSpeed * Time.deltaTime);
-
-            transform.Rotate(Vector3.up * mouseInput.x);
-            targetRot = Quaternion.Euler(Mathf.Clamp(xRot + jumpCameraOffset * rb.velocity.y, -maxCamRotY, maxCamRotY), 0f, -zRot) * Quaternion.Euler(dynamicOffset * (playerMovement.IsWaking ? 1f : 0f)) * Quaternion.Euler(noiseRot);
-
-            cameraTransform.transform.localRotation = Quaternion.Slerp(cam.transform.localRotation, targetRot, camRotLerpSpeed * Time.deltaTime);
-            cam.fieldOfView = Mathf.Clamp(Mathf.Lerp(cam.fieldOfView, defaultFov + playerMovement.CurrentVelocity * fovOffsetAmount, fovLerpSpeed * Time.deltaTime), 0f, maxFov);
-
-            healthAspect = Mathf.Max(player.Health / player.BaseHealth, 0.7f);
-            velocity = Mathf.Clamp(playerMovement.CurrentVelocity, 0.4f, 1f);
-            noiseRotLerpSpeed = noiseLerpSpeed / healthAspect * velocity;
-            _dynamicRotAmplitudeFactor = dynamicRotAmplitudeFactor / healthAspect * velocity;
-            _dynamicRotFreqerencyFactor = dynamicRotFrequencyFactor / healthAspect * velocity;
-            curNoiseRot = noiseRotation / healthAspect * velocity;
-
-            recoilOffset = 0f;
         }
 
         private IEnumerator GenerateNoise()
