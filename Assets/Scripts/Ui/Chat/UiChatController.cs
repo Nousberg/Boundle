@@ -3,7 +3,6 @@ using Assets.Scripts.Network;
 using Photon.Pun;
 using System.Collections.Generic;
 using UnityEngine;
-using System;
 
 namespace Assets.Scripts.Ui.Chat
 {
@@ -11,14 +10,15 @@ namespace Assets.Scripts.Ui.Chat
     public class UiChatController : MonoBehaviour
     {
         [SerializeField] private Transform messageList;
+        [SerializeField] private Transform globalMessageList;
         [SerializeField] private GameObject messagePrefab;
-
         private PhotonView view => GetComponent<PhotonView>();
 
         private ChatInputHandler chat;
         private CommandParser commandParser;
 
         private List<MessageUiData> messages = new List<MessageUiData>();
+        private List<MessageUiData> globalMessages = new List<MessageUiData>();
 
         public void Init(ChatInputHandler c, CommandParser p)
         {
@@ -27,47 +27,60 @@ namespace Assets.Scripts.Ui.Chat
 
             chat.OnMessageSent += (message) => {
                 if (!message.LogMessage)
-                    view.RPC("ShowMessage", RpcTarget.All, JsonUtility.ToJson(message));
+                    view.RPC(nameof(ShowMessageNative), RpcTarget.All, JsonUtility.ToJson(message));
                 else
-                    ShowMessage(JsonUtility.ToJson(message));
+                    ShowMessageNative(JsonUtility.ToJson(message));
             };
             chat.OnMessageDeleted += (message) => {
                 if (!message.LogMessage)
-                    view.RPC("DeleteMessage", RpcTarget.All, message.Id); 
+                    view.RPC(nameof(DeleteMessage), RpcTarget.All, message.Id); 
             };
         }
 
         [PunRPC]
-        private void ShowMessage(string jsonData)
+        public void ShowMessageNative(string jsonData)
         {
             Message data = JsonUtility.FromJson<Message>(jsonData);
 
-            GameObject messageObj = Instantiate(messagePrefab, messageList);
-
-            if (messageObj.TryGetComponent<MessageUiData>(out var msg))
-            {
-                if (data.ContentColor.IsAssigned())
-                    msg.ContentText.color = data.ContentColor.ToUnityColor();
-
-                msg.ContentText.text = (string.IsNullOrEmpty(data.Author) ? string.Empty : data.Author + ": ") + data.Content;
-                msg.Init(data.Id);
-
-                msg.OnDestroyEvent += HandleMessageAnimationEnd;
-            }
+            ShowMessage(data, messageList, true);
+            ShowMessage(data, globalMessageList, false);
         }
         [PunRPC]
         private void DeleteMessage(string guid)
         {
-            Guid id = Guid.Parse(guid);
-
-            MessageUiData msg = messages.Find(n => n.Id == id);
+            MessageUiData msg = messages.Find(n => n.Id == guid);
 
             if (msg != null)
             {
                 messages.Remove(msg);
-                Destroy(msg);
+                Destroy(msg.gameObject);
+            }
+
+            MessageUiData globalMsg = globalMessages.Find(n => n.Id == guid);
+
+            if (globalMsg != null)
+            {
+                globalMessages.Remove(globalMsg);
+                Destroy(globalMsg.gameObject);
             }
         }
-        private void HandleMessageAnimationEnd(MessageUiData msg) => messages.Remove(msg);
+        private void ShowMessage(Message data, Transform parent, bool animated)
+        {
+            GameObject messageObj = Instantiate(messagePrefab, parent);
+
+            if (messageObj.TryGetComponent<MessageUiData>(out var msg))
+            {
+                msg.ContentText.text = (string.IsNullOrEmpty(data.Author) ? string.Empty : data.Author + " : ") + data.Content;
+                msg.Init(data.Id, animated);
+
+                msg.OnDestroyEvent += () => messages.Remove(msg);
+
+                if (!data.LogMessage)
+                {
+                    messages.Add(msg);
+                    globalMessages.Add(msg);
+                }
+            }
+        }
     }
 }

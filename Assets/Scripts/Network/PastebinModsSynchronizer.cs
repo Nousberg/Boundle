@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
-using System.Threading.Tasks;
 using System.Linq;
+using Cysharp.Threading.Tasks;
 
 namespace Assets.Scripts.Network
 {
@@ -13,10 +13,12 @@ namespace Assets.Scripts.Network
         private const string API_KEY = "";
         private const string PASTE_NAME = "UserMod";
 
-        public override string Upload(string modPath) => _ = UploadModToPastebin(modPath).Result;
-        public override void Download(string modUrl, string outputPath) => _ = DownloadModFromPastebin(modUrl, outputPath);
+        public override async void Upload(string modPath)
+            => await UploadModToPastebin(modPath).ContinueWith((res) => UploadEvent(res));
+        public override async void Download(string modUrl, string outputPath) 
+            => await DownloadModFromPastebin(modUrl, outputPath).ContinueWith(() => DownloadEvent(modUrl));
 
-        private async Task<string> UploadModToPastebin(string filePath)
+        private async UniTask<string> UploadModToPastebin(string filePath)
         {
             if (!File.Exists(filePath) || !mLoader.LoadModNative(filePath, true))
                 return string.Empty;
@@ -45,7 +47,7 @@ namespace Assets.Scripts.Network
                 return result;
             }
         }
-        private async Task DownloadModFromPastebin(string pasteUrl, string destinationPath)
+        private async UniTask DownloadModFromPastebin(string pasteUrl, string destinationPath)
         {
             string pasteKey = pasteUrl.Split('/').Last();
 

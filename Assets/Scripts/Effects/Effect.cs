@@ -1,7 +1,7 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace Assets.Scripts.Effects
 {
@@ -9,6 +9,7 @@ namespace Assets.Scripts.Effects
     {
         public readonly bool Infinite;
 
+        public int RemainingLifetime { get; private set; }
         public int Duration { get; private set; }
         public float Amplifier { get; protected set; }
         public bool IsEnded { get; private set; }
@@ -29,22 +30,8 @@ namespace Assets.Scripts.Effects
                 _ = StartEffectLifeCycle(tokenSource.Token);
             }
         }
-        public void SetAmplifier(float value)
-        {
-            Amplifier = Math.Max(value, 0f);
-        }
-        public void SetDuration(int value)
-        {
-            if (value <= 0)
-            {
-                StopEffect();
-                return;
-            }
+        public void SetAmplifier(float value) => Amplifier = Math.Max(value, 0f);
 
-            Duration = value;
-            tokenSource.Cancel();
-            _ = StartEffectLifeCycle(tokenSource.Token);
-        }
         public void StopEffect()
         {
             tokenSource?.Cancel();
@@ -54,11 +41,35 @@ namespace Assets.Scripts.Effects
 
         public abstract void CombineEffects(Effect effect);
 
-        private async Task StartEffectLifeCycle(CancellationToken token)
+        protected void SetLifetime(int value)
         {
-            await Task.Delay(Duration, token);
+            if (value > -1 && value < int.MaxValue)
+            {
+                RemainingLifetime = value;
+
+                if (value > Duration)
+                    Duration = value;
+            }
+        }
+
+        private async UniTask StartEffectLifeCycle(CancellationToken token)
+        {
+            int interval = 1000;
+
+            RemainingLifetime = Duration;
+
+            while (RemainingLifetime > 0)
+            {
+                if (token.IsCancellationRequested)
+                    return;
+
+                await UniTask.Delay(interval, cancellationToken: token);
+                RemainingLifetime -= interval / 1000;
+            }
+
             IsEnded = true;
             OnEffectEnded?.Invoke(this);
         }
+
     }
 }

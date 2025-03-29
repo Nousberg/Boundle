@@ -8,10 +8,15 @@ namespace Assets.Scripts.Network
         public PhotonView view => GetComponent<PhotonView>();
 
         [PunRPC]
-        public void Kick()
+        public void Kick(string reason = "not specified")
         {
             if (view.IsMine)
+            {
                 PhotonNetwork.LeaveRoom();
+
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
         }
     }
 }

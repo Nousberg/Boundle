@@ -4,7 +4,7 @@ namespace Assets.Scripts.Core.Input_System
 {
     public class MovementInputState : InputState
     {
-        public override void Init()
+        public MovementInputState()
         {
             ActiveBinds.Add(InputSystem.InputHandler.InputBind.JUMP, true);
             ActiveBinds.Add(InputSystem.InputHandler.InputBind.RUNSTATE, true);

@@ -16,6 +16,7 @@ namespace Assets.Scripts.Effects
         public override void CombineEffects(Effect effect)
         {
             Amplifier += effect.Amplifier;
+            SetLifetime(effect.Duration + RemainingLifetime);
         }
     }
 }

@@ -14,22 +14,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   <Dropable>k__BackingField: 1
   <Id>k__BackingField: 4
-  <Weight>k__BackingField: 23
+  <Weight>k__BackingField: 20
   <ColliderScale>k__BackingField: {x: 0.001, y: 0.03, z: 0.006}
-  <prefab>k__BackingField: {fileID: 919132149155446097, guid: f1f3623ab1830da4c8d052d3acfbf5e4,
-    type: 3}
+  <Crosshair>k__BackingField: 1
+  <ActionCrosshair>k__BackingField: 0
+  <prefab>k__BackingField: Mossberg500
   <Icon>k__BackingField: {fileID: 21300000, guid: 353517ee4be39084c80b27eab984e83c,
     type: 3}
   <MyType>k__BackingField: 1
   <DamageType>k__BackingField: 2
-  <Damage>k__BackingField: 1
-  <PushStrenght>k__BackingField: 250
+  <Damage>k__BackingField: 15
+  <PushStrenght>k__BackingField: 85
   <Spread>k__BackingField: 0.1
   <Recoil>k__BackingField: 25
-  <FireRate>k__BackingField: 2
-  <ReloadDuration>k__BackingField: 4
+  <FireRate>k__BackingField: 0.5
+  <ReloadDuration>k__BackingField: 1
   <Range>k__BackingField: 100
-  <BulletsPerShot>k__BackingField: 50
-  <BaseAmmo>k__BackingField: 999
-  <FireSound>k__BackingField: {fileID: 0}
-  <ReloadSound>k__BackingField: {fileID: 0}
+  <BulletsPerShot>k__BackingField: 25
+  <BaseAmmo>k__BackingField: 6
+  <OverheatRate>k__BackingField: 0
+  <CriticalOverheat>k__BackingField: 0
+  <FireSoundId>k__BackingField: 10
+  <ReloadSoundId>k__BackingField: 11
+  <NoAmmoSoundId>k__BackingField: 12
+  <AimedFovChange>k__BackingField: 45
+  <AimedPosition>k__BackingField: {x: -0.46, y: -0.48, z: -0.27}

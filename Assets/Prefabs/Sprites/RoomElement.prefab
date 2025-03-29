@@ -171,7 +171,7 @@ MonoBehaviour:
   <PlayersCount>k__BackingField: {fileID: 3870850200267988402}
   <Name>k__BackingField: {fileID: 8557929298999064909}
   <Icon>k__BackingField: {fileID: 2230946513037015011}
-  <Private>k__BackingField: {fileID: 0}
+  <Password>k__BackingField: {fileID: 0}
   <Input>k__BackingField: {fileID: 0}
 --- !u!114 &405981146966197843
 MonoBehaviour:
@@ -198,7 +198,7 @@ MonoBehaviour:
     m_HighlightedColor: {r: 0.5568628, g: 0.5568628, b: 0.5568628, a: 0.16078432}
     m_PressedColor: {r: 0.44313726, g: 0.44313726, b: 0.44313726, a: 0.078431375}
     m_SelectedColor: {r: 0.44313726, g: 0.44313726, b: 0.44313726, a: 0.078431375}
-    m_DisabledColor: {r: 1, g: 1, b: 1, a: 0.078431375}
+    m_DisabledColor: {r: 1, g: 0.75, b: 0.75, a: 0.078431375}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:

@@ -1,4 +1,5 @@
 ﻿using Assets.Scripts.Network;
+using Newtonsoft.Json;
 using Photon.Pun;
 using Photon.Realtime;
 using System.Collections.Generic;
@@ -11,6 +12,9 @@ namespace Assets.Scripts.Ui.Multiplayer
     [RequireComponent(typeof(SceneInfo))]
     public class RoomsVisualizer : MonoBehaviourPunCallbacks
     {
+        [SerializeField] private GameObject noRoomsAlert;
+        [SerializeField] private TextMeshProUGUI roomName;
+        [SerializeField] private TextMeshProUGUI roomPlayers;
         [SerializeField] private BannerDownloader bannerInstaller;
         [SerializeField] private Transform roomsParent;
         [SerializeField] private GameObject roomInfo;
@@ -39,6 +43,14 @@ namespace Assets.Scripts.Ui.Multiplayer
         {
             if (!PhotonNetwork.InLobby)
                 return;
+
+            if (rooms.Count < 1)
+            {
+                noRoomsAlert.SetActive(true);
+                return;
+            }
+            else
+                noRoomsAlert.SetActive(false);
 
             roomObjects.ForEach(n => Destroy(n));
             roomObjects.Clear();
@@ -77,6 +89,11 @@ namespace Assets.Scripts.Ui.Multiplayer
                 roomData.Name.text = room.Name;
 
                 roomData.Icon.sprite = scenes.Scenes.Find(n => n.Index == (int)room.CustomProperties[Connector.ROOM_HASHTABLE_SCENE_KEY]).Icon;
+
+                List<string> banlist = JsonConvert.DeserializeObject<List<string>>(room.CustomProperties[Connector.ROOM_BANLIST_KEY].ToString());
+
+                if (banlist.Contains(PlayerPrefs.GetString(Connector.PLAYER_ID_KEY)))
+                    roomData.ToggleButton.interactable = false;
             }
         }
 
@@ -111,6 +128,8 @@ namespace Assets.Scripts.Ui.Multiplayer
             roomDescription.text = desc != null && desc.ToString() != string.Empty
                 ? desc.ToString()
                 : "Default boundle server.";
+            roomName.text = info.Name;
+            roomPlayers.text = $"{info.PlayerCount} / {Connector.ROOM_MAX_PLAYERS}";
 
             selectedRoom = info.Name;
             roomInfo.SetActive(true);

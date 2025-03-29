@@ -1,17 +1,14 @@
-﻿using Assets.Scripts.Core.Input_System;
+﻿using Assets.Scripts.Core;
+using Assets.Scripts.Core.Environment;
+using Assets.Scripts.Core.Input_System;
+using Assets.Scripts.Core.Sound;
 using Assets.Scripts.Entities;
 using Assets.Scripts.Entities.Abilities;
 using Assets.Scripts.Inventory;
 using Assets.Scripts.Inventory.View;
 using Assets.Scripts.Movement;
-using Assets.Scripts.Network;
-using Assets.Scripts.Network.Chat;
-using Assets.Scripts.Ui.Chat;
-using Assets.Scripts.Ui.Effects;
 using Assets.Scripts.Ui.Inventory;
-using Assets.Scripts.Ui.Player;
 using Photon.Pun;
-using TMPro;
 using UnityEngine;
 
 namespace Assets.Scripts.Spawning
@@ -19,17 +16,13 @@ namespace Assets.Scripts.Spawning
     [RequireComponent(typeof(PhotonView))]
     public class SummonablePlayer : Summonable
     {
-        [SerializeField] private InputInitializer inputInitializer;
+        [SerializeField] private GameObject playerModel;
+        [SerializeField] private PlayerSoundController soundController;
+        [SerializeField] private PlayerRespawnProvider respawner;
+        [SerializeField] private GameObject nonLocalCanvas;
+        [SerializeField] private MeleeDataController melee;
+        [SerializeField] private ShotgunDataController shotgun;
         [SerializeField] private Rigidbody rb;
-        [SerializeField] private UiChatController chatController;
-        [SerializeField] private TextMeshProUGUI plrName;
-        [SerializeField] private TextMeshProUGUI serverName;
-        [SerializeField] private InventoryDataVisualizer invVisual;
-        [SerializeField] private PlayerEffectsVisualizer effects;
-        [SerializeField] private ChatInteractProvider chat;
-        [SerializeField] private GameVisualManager visualManager;
-        [SerializeField] private GameObject uiCanvas;
-        [SerializeField] private GameObject cam;
         [SerializeField] private ItemSway sway;
         [SerializeField] private Entity playerEntity;
         [SerializeField] private PlayerInventoryController invController;
@@ -37,7 +30,9 @@ namespace Assets.Scripts.Spawning
         [SerializeField] private FlyAbility fly;
         [SerializeField] private PlayerMovementLogic movement;
         [SerializeField] private PlayerCameraLogic camMovement;
-        [SerializeField] private ToolgunDataController toolgun;
+
+        public GameObject cam;
+        public ToolgunDataController toolgun;
 
         private PhotonView View => GetComponent<PhotonView>();
 
@@ -45,43 +40,54 @@ namespace Assets.Scripts.Spawning
         {
             if (View.IsMine)
             {
-                rb.useGravity = true;
+                playerModel.SetActive(false);
+                nonLocalCanvas.SetActive(false);
 
-                plrName.text = PhotonNetwork.NickName;
-                serverName.text = PhotonNetwork.CurrentRoom.Name;
-
-                effects.Init();
-
-                if (metaObject.TryGetComponent<InputMachine>(out var inputMachine))
+                if (metaObject.TryGetComponent<Bootstrap>(out var boot))
                 {
-                    inputInitializer.Init(inputMachine);
-                    visualManager.Init(inputMachine);
+                    rb.useGravity = true;
 
-                    if (metaObject.TryGetComponent<Summonables>(out var summonables))
-                        toolgun.Init(summonables, inputMachine);
+                    if (metaObject.TryGetComponent<InputMachine>(out var inputMachine))
+                    {
+                        InitInput(metaObject, inputMachine, boot);
+
+                        if (metaObject.TryGetComponent<SceneData>(out var sceneData))
+                            respawner.Init(inputMachine, sceneData);
+                    }
+
+                    cam.SetActive(true);
+
+                    soundController.Init();
+                    playerEntity.Init();
+                    inventory.Init();
                 }
-
-                if (metaObject.TryGetComponent<ChatInputHandler>(out var chatInput))
-                {
-                    if (metaObject.TryGetComponent<CommandParser>(out var p))
-                        chatController.Init(chatInput, p);
-
-                    chat.Init(chatInput);
-                }
-
-                uiCanvas.SetActive(true);
-                cam.SetActive(true);
-
-                sway.Init();
-                invController.Init();
-                movement.Init();
-                camMovement.Init();
-
-                playerEntity.Init();
-                fly.Init();
-                invVisual.Init();
-                inventory.Init();
             }
+        }
+        private void InitInput(GameObject metaObject, InputMachine machine, Bootstrap boot)
+        {
+            MovementInputState movementState = new MovementInputState();
+            ToolgunInputState toolgunState = new ToolgunInputState();
+            InventoryControllerInputState inventoryState = new InventoryControllerInputState();
+            AbilityInputState abilityState = new AbilityInputState();
+            WeaponInputState weaponState = new WeaponInputState();
+
+            shotgun.Init(weaponState);
+            melee.Init(weaponState);
+            fly.Init(abilityState);
+            sway.Init(movementState);
+            invController.Init(inventoryState);
+            movement.Init(movementState);
+            camMovement.Init(movementState);
+
+            if (metaObject.TryGetComponent<Summonables>(out var summonables))
+                toolgun.Init(summonables, machine, toolgunState);
+
+            machine.AddState(weaponState);
+            machine.AddState(abilityState);
+            machine.AddState(inventoryState);
+            machine.AddState(toolgunState);
+            machine.AddState(movementState);
+            machine.Init();
         }
     }
 }

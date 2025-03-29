@@ -1,43 +1,75 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using Assets.Scripts.Core.Input_System;
+using Assets.Scripts.Core.InputSystem;
+using Assets.Scripts.Effects;
+using Assets.Scripts.Network;
+using Photon.Pun;
 using UnityEngine;
 
 namespace Assets.Scripts.Inventory
 {
     internal class MeleeDataController : WeaponDataController
     {
+        [SerializeField] private EffectContainer effects;
         [SerializeField] private Transform raycastPos;
 
         [Header("Additional")]
         [SerializeField] private List<string> attackAnimations = new List<string>();
         [SerializeField] private string defenceAnimation;
 
+        private InputState inputSource;
+        private Effect resist;
         private float defaultAttackAnimsSpeed;
 
-        private void Start()
+        public void Init(InputState inputSource)
         {
+            this.inputSource = inputSource;
             defaultAttackAnimsSpeed = handsAnimator.GetFloat("AttackSpeed");
         }
+
         private void Update()
         {
             if (weaponData != null)
             {
-                if (Input.GetMouseButton(0) && weaponData.fireTime <= Time.time)
+                if (!inputSource.BoolBinds[InputHandler.InputBind.MOUSERIGHT] && inputSource.BoolBinds[InputHandler.InputBind.MOUSELEFT] && weaponData.fireTime <= Time.time)
                 {
+                    if (!PhotonNetwork.OfflineMode && !Convert.ToBoolean(PhotonNetwork.CurrentRoom.CustomProperties[Connector.ROOM_HASHTABLE_ALLOW_DAMAGE_KEY]))
+                        return;
+
                     weaponData.fireTime = Time.time + 1f / baseWeaponData.FireRate;
 
                     ThrowDamage(raycastPos);
 
-                    EndAttackAnims();
-                    handsAnimator.SetBool(attackAnimations[Random.Range(0, attackAnimations.Count - 1)], true);
+                    EndAnims();
+                    handsAnimator.SetBool(attackAnimations[UnityEngine.Random.Range(0, attackAnimations.Count - 1)], true);
                 }
+                else if (inputSource.BoolBinds[InputHandler.InputBind.MOUSERIGHT])
+                    handsAnimator.SetBool(defenceAnimation, true);
                 else
-                    EndAttackAnims();
+                {
+                    effects.RemoveEffect(resist);
+                    EndAnims();
+                }
             }
         }
-        private void EndAttackAnims()
+        private void OnDefenceToggled(InputHandler.InputBind bind)
+        {
+            if (bind == InputHandler.InputBind.MOUSERIGHT)
+            {
+                resist = new Resistance(carrier, 0, 100f, true);
+                effects.ApplyEffect(resist);
+                EndAnims();
+            }
+        }
+        private void EndAnims()
         {
             foreach (var anim in attackAnimations)
                 handsAnimator.SetBool(anim, false);
+
+            handsAnimator.SetBool(defenceAnimation, false);
         }
+        private void OnDisable() => inputSource.InputRecieved -= OnDefenceToggled;
+        private void OnEnable() => inputSource.InputRecieved += OnDefenceToggled;
     }
 }

@@ -1,12 +1,11 @@
-﻿using Assets.Scripts.Inventory.DynamicData;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace Assets.Scripts.Inventory
 {
     public class DroppedItem : MonoBehaviour
     {
-        public DynamicItemData Data { get; private set; }
+        [HideInInspector] public string data;
 
-        public void Init(DynamicItemData data) => Data = data;
+        public void Init(string data) => this.data = data;
     }
 }

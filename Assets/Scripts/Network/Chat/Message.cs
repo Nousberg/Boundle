@@ -1,25 +1,24 @@
 ﻿using System;
-using Assets.Scripts.Saving.Data;
 
 namespace Assets.Scripts.Network.Chat
 {
     [Serializable]
     public class Message
     {
-        public Guid Id;
+        public string Id;
         public string Author;
         public string Content;
 
+        public bool IgnoreFilter;
         public bool LogMessage;
-        public Color ContentColor;
 
-        public Message(Guid id, string author, string content, Color contentColor = default, bool logMessage = false)
+        public Message(string id, string author, string content, bool logMessage = false, bool ignoreFilter = false)
         {
             Id = id;
             Author = author;
             Content = content;
-            ContentColor = contentColor;
             LogMessage = logMessage;
+            IgnoreFilter = ignoreFilter;
         }
     }
 }

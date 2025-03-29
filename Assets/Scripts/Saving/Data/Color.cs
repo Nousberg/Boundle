@@ -3,18 +3,21 @@
 namespace Assets.Scripts.Saving.Data
 {
     [Serializable]
-    public struct Color
+    public class Color
     {
-        public float r, g, b, a;
+        public float r;
+        public float g;
+        public float b;
+        public float a;
 
-        public Color(float r = 0, float g = 0, float b = 0, float a = 0)
+        public Color(float r = float.NegativeInfinity, float g = float.NegativeInfinity, float b = float.NegativeInfinity, float a = float.NegativeInfinity)
         {
             this.r = r;
             this.g = g;
             this.b = b;
             this.a = a;
         }
-        public bool IsAssigned() => r != 0 && g != 0 && b != 0 && a != 0;
+        public bool IsAssigned() => r != float.NegativeInfinity && g != float.NegativeInfinity && b != float.NegativeInfinity && a != float.NegativeInfinity;
         public UnityEngine.Color ToUnityColor() => new UnityEngine.Color(r, g, b, a);
     }
 }

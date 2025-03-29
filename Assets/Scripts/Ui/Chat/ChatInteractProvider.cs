@@ -5,16 +5,11 @@ using UnityEngine;
 
 namespace Assets.Scripts.Ui.Chat
 {
+    [RequireComponent(typeof(ChatInputHandler))]
     public class ChatInteractProvider : MonoBehaviour
     {
-        private ChatInputHandler chat;
+        private ChatInputHandler chatHandler => GetComponent<ChatInputHandler>();
 
-        public void Init(ChatInputHandler cHandler)
-        {
-            chat = cHandler;
-            Send("/effect add self godness 1 50 true");
-        }
-
-        public void Send(string message) => chat.HandleMessage(new Message(Guid.NewGuid(), PhotonNetwork.NickName, message), gameObject);
+        public void Send(string message) => chatHandler.HandleMessage(new Message(Guid.NewGuid().ToString(), PhotonNetwork.NickName, message));
     }
 }

@@ -1,6 +1,4 @@
-﻿using Assets.Scripts.Effects;
-using Assets.Scripts.Inventory.Scriptables;
-using System.Collections.Generic;
+﻿using Assets.Scripts.Inventory.Scriptables;
 
 namespace Assets.Scripts.Inventory.DynamicData
 {

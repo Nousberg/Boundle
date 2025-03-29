@@ -1,7 +1,7 @@
 using System;
 using Photon.Pun;
 using System.Collections.Generic;
-using Assets.Scripts.Saving;
+using Assets.Scripts.Saving.EffectsData;
 using UnityEngine;
 using Assets.Scripts.Entities;
 using Assets.Scripts.Inventory;
@@ -22,7 +22,7 @@ namespace Assets.Scripts.Effects
         {
             if (view.IsMine)
             {
-                EffectData data = JsonUtility.FromJson<EffectData>(effect);
+                SavedEffect data = JsonUtility.FromJson<SavedEffect>(effect);
 
                 if (data.type == "Resistance" && TryGetComponent<Entity>(out var e))
                     ApplyEffect(new Resistance(e, data.duration, data.amplifier, data.infinite));
@@ -33,22 +33,42 @@ namespace Assets.Scripts.Effects
             }
         }
         [PunRPC]
-        private void RPC_RemoveEffect(string type)
+        private void RPC_RemoveEffectByType(string type)
         {
             if (view.IsMine)
                 foreach (Effect effect in Effects)
                     if (effect.GetType().Name == type)
-                        RemoveEffect(effect.GetType());
+                        RemoveEffectByType(effect.GetType());
+        }
+        [PunRPC]
+        private void RPC_ClearEffects()
+        {
+            if (view.IsMine)
+                foreach (Effect effect in Effects)
+                    effect.StopEffect();
+        }
+        private void NativeClearEffects()
+        {
+            foreach (Effect effect in new List<Effect>(Effects))
+                effect.StopEffect();
         }
 
+        public void ClearEffects()
+        {
+            if (view.IsMine)
+                foreach (Effect effect in new List<Effect>(Effects))
+                    effect.StopEffect();
+            else
+                view.RPC(nameof(RPC_ClearEffects), view.Owner);
+        }
         public void ApplyEffect(Effect effect)
         {
             if (view.IsMine)
             {
-                Effect findedEffect = Effects.Find(n => n.GetType() == effect.GetType());
-
                 if (!effect.IsEnded)
                 {
+                    Effect findedEffect = Effects.Find(n => n.GetType() == effect.GetType());
+
                     if (findedEffect != null)
                         findedEffect.CombineEffects(effect);
                     else
@@ -60,12 +80,12 @@ namespace Assets.Scripts.Effects
                 }
             }
             else
-                view.RPC("RPC_ApplyEffect", RpcTarget.All,
+                view.RPC(nameof(RPC_ApplyEffect), view.Owner,
                     JsonUtility.ToJson(
-                        new EffectData(
-                            effect.Duration, effect.Amplifier, effect.Infinite, effect.GetType().Name)));
+                        new SavedEffect(
+                            effect.Duration, effect.Amplifier, effect.Infinite, effect.GetType().Name, -1)));
         }
-        public void RemoveEffect(Type type)
+        public void RemoveEffectByType(Type type)
         {
             if (view.IsMine)
             {
@@ -76,11 +96,21 @@ namespace Assets.Scripts.Effects
                     findedEffect.StopEffect();
                     Effects.Remove(findedEffect);
                     OnEffectRemoved?.Invoke(findedEffect);
-                    Debug.Log(1223232323);
                 }
             }
             else
-                view.RPC("RPC_RemoveEffect", RpcTarget.All, type.Name);
+                view.RPC(nameof(RPC_RemoveEffectByType), view.Owner, type.Name);
+        }
+        public void RemoveEffect(Effect effect)
+        {
+            if (view.IsMine)
+            {
+                if (!Effects.Contains(effect))
+                    return;
+
+                Effects.Remove(effect);
+                OnEffectRemoved?.Invoke(effect);
+            }
         }
 
         private void HandleEffectEnd(Effect effect)

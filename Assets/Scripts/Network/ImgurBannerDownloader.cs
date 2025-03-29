@@ -7,10 +7,7 @@ using UnityEngine;
 
 public class ImgurBannerDownloader : BannerDownloader
 {
-    public override void Download(string url)
-    {
-        StartCoroutine(DownloadRoutine(url));
-    }
+    public override void Download(string url) => StartCoroutine(DownloadRoutine(url));
 
     private IEnumerator DownloadRoutine(string pageUrl)
     {

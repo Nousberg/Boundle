@@ -18,17 +18,14 @@ namespace Assets.Scripts.Ui
 
         private void Start()
         {
-            if (view.IsMine)
-            {
-                Color targetColor = loadingBackground.color;
-                targetColor.a = 0f;
+            Color targetColor = loadingBackground.color;
+            targetColor.a = 0f;
 
-                loadingBackground
-                    .DOColor(targetColor, transitionDuration)
-                    .SetUpdate(UpdateType.Normal, true)
-                    .SetEase(transitionEase)
-                    .OnComplete(() => loadingBackground.gameObject.SetActive(false));
-            }
+            loadingBackground
+                .DOColor(targetColor, transitionDuration)
+                .SetUpdate(UpdateType.Normal, true)
+                .SetEase(transitionEase)
+                .OnComplete(() => loadingBackground.gameObject.SetActive(false));
         }
     }
 }

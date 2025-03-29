@@ -18,10 +18,18 @@ namespace Assets.Scripts.Inventory.Scriptables
         [field: SerializeField] public float Range { get; private set; }
         [field: SerializeField] public int BulletsPerShot { get; private set; }
         [field: SerializeField] public int BaseAmmo { get; private set; }
+        [field: SerializeField] public float OverheatRate { get; private set; }
+        [field: SerializeField] public float CriticalOverheat { get; private set; }
+
 
         [field: Header("Sound Properties")]
-        [field: SerializeField] public AudioClip FireSound { get; private set; }
-        [field: SerializeField] public AudioClip ReloadSound { get; private set; }
+        [field: SerializeField] public int FireSoundId { get; private set; }
+        [field: SerializeField] public int ReloadSoundId { get; private set; }
+        [field: SerializeField] public int NoAmmoSoundId { get; private set; }
+
+        [field: Header("Other")]
+        [field: SerializeField] public float AimedFovChange { get; private set; }
+        [field: SerializeField] public Vector3 AimedPosition { get; private set; }
 
         public enum WeaponType : byte
         {

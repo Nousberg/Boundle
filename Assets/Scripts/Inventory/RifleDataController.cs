@@ -1,7 +1,4 @@
-﻿using Assets.Scripts.Entities;
-using Assets.Scripts.Inventory.DynamicData;
-using Assets.Scripts.Inventory.Scriptables;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace Assets.Scripts.Inventory
 {
@@ -62,7 +59,6 @@ namespace Assets.Scripts.Inventory
             handsAnimator.SetBool("Reload", true);
             itemAnimator.SetBool("Reload", true);
 
-            ReloadEvent();
             AmmoChangeEvent();
         }
     }

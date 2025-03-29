@@ -12,7 +12,7 @@ namespace Assets.Scripts.Entities.Liquids
         [field: SerializeField] public float Capacity { get; private set; }
         [SerializeField] private List<Liquid> liquids = new List<Liquid>();
 
-        public List<Liquid> GetLiquids => liquids;
+        public List<Liquid> GetLiquids => new List<Liquid>(liquids);
         public float Weight => liquids.Sum(n => n.amount);
 
         public event Action OnLiquidsChanged;

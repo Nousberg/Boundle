@@ -134,8 +134,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   <ObjectId>k__BackingField: 0
-  <Icon>k__BackingField: {fileID: 0}
-  <Category>k__BackingField: 1
+  <SpawnOffset>k__BackingField: {x: 0, y: 0, z: 0}
   syringe: {fileID: 4066623773766429785}
   baseLiquids:
   - type: 1
@@ -187,7 +186,7 @@ Rigidbody:
   m_IsKinematic: 0
   m_Interpolate: 0
   m_Constraints: 0
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
 --- !u!114 &6961034942096089113
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -204,7 +203,7 @@ MonoBehaviour:
   Group: 0
   prefixField: -1
   Synchronization: 1
-  OwnershipTransfer: 0
+  OwnershipTransfer: 2
   observableSearch: 2
   ObservedComponents:
   - {fileID: 3802570931648488106}
@@ -244,7 +243,7 @@ MonoBehaviour:
   m_SynchronizeVelocity: 0
   m_SynchronizeAngularVelocity: 0
   m_TeleportEnabled: 1
-  m_TeleportIfDistanceGreaterThan: 3
+  m_TeleportIfDistanceGreaterThan: 12
 --- !u!1 &4854675216212362897
 GameObject:
   m_ObjectHideFlags: 0

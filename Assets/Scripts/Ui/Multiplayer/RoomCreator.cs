@@ -28,6 +28,7 @@ namespace Assets.Scripts.Ui.Multiplayer
         public string buildedRoomName;
         public int buildedRoomPlayers;
         public int buildedRoomScene;
+        public bool buildedRoomPrivate;
         public string buildedRoomPassword = string.Empty;
 
         private void Start()
@@ -61,8 +62,8 @@ namespace Assets.Scripts.Ui.Multiplayer
 
         public void CreateBuildedRoom()
         {
-            if (buildedRoomPlayers > 0 && !string.IsNullOrEmpty(buildedRoomName))
-                connector.CreateRoom(buildedRoomName, buildedRoomPlayers, buildedRoomScene, buildedRoomPassword, buildedRoomDesc, buildedRoomBannerLink);
+            if (buildedRoomPlayers > 1 && !string.IsNullOrEmpty(buildedRoomName))
+                connector.CreateRoom(buildedRoomName, buildedRoomPlayers, buildedRoomScene, buildedRoomPrivate, buildedRoomPassword, buildedRoomDesc, buildedRoomBannerLink);
             else
                 connector.CreateOfflineRoom(buildedRoomScene);
         }
@@ -86,6 +87,10 @@ namespace Assets.Scripts.Ui.Multiplayer
         public void SetBuildedRoomBanner(string link)
         {
             buildedRoomBannerLink = link;
+        }
+        public void SetBuildedRoomPrivate(bool state)
+        {
+            buildedRoomPrivate = state;
         }
 
         private void SetBuildedRoomScene(int scene)

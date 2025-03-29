@@ -1,5 +1,4 @@
-﻿using Assets.Scripts.Core.Environment;
-using Assets.Scripts.Entities;
+﻿using Assets.Scripts.Entities;
 using Assets.Scripts.Entities.Liquids;
 using Assets.Scripts.Inventory.DynamicData;
 using Assets.Scripts.Inventory.Scriptables;
@@ -22,6 +21,9 @@ namespace Assets.Scripts.Inventory
         public delegate void FireHandler(ref float damage);
 
         public event FireHandler OnFireForEffects;
+        public event Action OnAimed;
+        public event Action OnUnAimed;
+        public event Action OnOutOfAmmo;
         public event Action OnFire;
         public event Action OnAmmoChanged;
         public event Action OnReload;
@@ -31,8 +33,11 @@ namespace Assets.Scripts.Inventory
 
         protected void FireEffectsEvent(ref float damage) => OnFireForEffects?.Invoke(ref damage);
         protected void FireEvent() => OnFire?.Invoke();
+        protected void OutOfAmmoEvent() => OnOutOfAmmo?.Invoke();
         protected void AmmoChangeEvent() => OnAmmoChanged?.Invoke();
         protected void ReloadEvent() => OnReload?.Invoke();
+        protected void AimedEvent() => OnAimed?.Invoke();
+        protected void UnAimedEvent() => OnUnAimed?.Invoke();
 
         protected void ThrowDamage(Transform raycastPos)
         {
@@ -46,9 +51,9 @@ namespace Assets.Scripts.Inventory
                 UnityEngine.Random.Range(-baseWeaponData.Spread, baseWeaponData.Spread),
                 UnityEngine.Random.Range(-baseWeaponData.Spread, baseWeaponData.Spread),
                 UnityEngine.Random.Range(-baseWeaponData.Spread, baseWeaponData.Spread)
-);
+            );
 
-                if (Physics.Raycast(raycastPos.position, raycastPos.forward + recoilAdjustment, out hit, baseWeaponData.Range))
+                if (Physics.Raycast(raycastPos.position, raycastPos.forward + recoilAdjustment, out hit, baseWeaponData.Range, ~0, QueryTriggerInteraction.Collide))
                 {
                     Entity target = hit.collider.GetComponent<Entity>();
 
@@ -83,7 +88,7 @@ namespace Assets.Scripts.Inventory
                     }
 
                     if (hit.collider.TryGetComponent<PhotonRigidbodyView>(out var rbV))
-                        rbV.photonView.RPC("AddForce", RpcTarget.All, -hit.normal * baseWeaponData.PushStrenght);
+                        rbV.photonView.RPC(nameof(PhotonRigidbodyView.AddForce), RpcTarget.All, -hit.normal * baseWeaponData.PushStrenght);
                     else if (hit.collider.TryGetComponent<Rigidbody>(out var rb))
                         rb.AddForce(-hit.normal * baseWeaponData.PushStrenght);
                 }

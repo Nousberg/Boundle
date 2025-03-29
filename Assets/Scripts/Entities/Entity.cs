@@ -8,6 +8,8 @@ using UnityEngine;
 using Photon.Pun;
 using Assets.Scripts.Core;
 using System.Linq;
+using Assets.Scripts.Effects;
+using Assets.Scripts.Inventory;
 
 namespace Assets.Scripts.Entities
 {
@@ -16,6 +18,9 @@ namespace Assets.Scripts.Entities
     [RequireComponent(typeof(PhotonView))]
     public class Entity : MonoBehaviourPun, IPunObservable, IDamageable
     {
+        [SerializeField] private EffectContainer effects;
+        [SerializeField] private InventoryDataController inventory;
+
         [field: Header("Entity properties")]
         [field: SerializeField] public EntityType MyType { get; private set; }
         [Min(0f)][SerializeField] private float criticalFallVelocity;
@@ -44,8 +49,8 @@ namespace Assets.Scripts.Entities
 
         [field: Header("Health")]
         [field: Min(0f)][field: SerializeField] public float BaseHealth { get; private set; }
-        [field: SerializeField] public bool Invulnerable { get; private set; }
-        [field: SerializeField] public List<DamageData.DamageType> DamageSensors { get; private set; } = new List<DamageData.DamageType>();
+        public bool Invulnerable;
+        public List<DamageData.DamageType> DamageSensors = new List<DamageData.DamageType>();
 
         public delegate void DamageHandler(ref float amount, DamageData.DamageType type, Entity attacker);
 
@@ -123,12 +128,12 @@ namespace Assets.Scripts.Entities
             if (physicsData.Temperature > criticalMaxTemperature && Time.time >= nextTemperatureDamage)
             {
                 nextTemperatureDamage = Time.time + criticalMaxTemperature / physicsData.Temperature;
-                TakeDamage((physicsData.Temperature - criticalMaxTemperature) * (1f - temperatureResistance), this, DamageData.DamageType.Magic);
+                TakeDamage((physicsData.Temperature - criticalMaxTemperature) * (1f - temperatureResistance), this, DamageData.DamageType.Temperature);
             }
             else if (physicsData.Temperature < criticalMinTemperature && Time.time >= nextTemperatureDamage)
             {
                 nextTemperatureDamage = Time.time + physicsData.Temperature / criticalMinTemperature;
-                TakeDamage((criticalMinTemperature - physicsData.Temperature) * (1f - temperatureResistance), this, DamageData.DamageType.Magic);
+                TakeDamage((criticalMinTemperature - physicsData.Temperature) * (1f - temperatureResistance), this, DamageData.DamageType.Temperature);
             }
         }
         private void HandleLiquids()
@@ -157,15 +162,18 @@ namespace Assets.Scripts.Entities
             {
                 OnDeath?.Invoke();
                 OnHealthChanged?.Invoke();
+
+                if (effects != null)
+                    effects.ClearEffects();
+                if (inventory != null)
+                    inventory.Clear();
+
                 return true;
             }
             return false;
         }
         private IEnumerator ApplyBloodloss(float damage)
         {
-            if (Dead())
-                yield break;
-
             float dividedDamage = damage / 2f;
 
             float clampedDamageInfluenceFactors = Mathf.Clamp(
@@ -178,6 +186,9 @@ namespace Assets.Scripts.Entities
                 Mathf.Max(bloodRef.amount, normalBloodAmount)), 0.1f, 1f);
 
             Health = Mathf.Max(Health - dividedDamage / (clampedDamageInfluenceFactors), 0f);
+
+            if (Dead())
+                yield break;
 
             float bloodloss = dividedDamage / BaseHealth;
             float clampedBloodloss = Mathf.Min(bloodloss, 1f);
@@ -204,19 +215,16 @@ namespace Assets.Scripts.Entities
         [PunRPC]
         private void RPC_TakeDamageToOwner(float amount, int attackerViewId, int type)
         {
-            if (view.IsMine)
-            {
-                List<Entity> es = FindObjectsOfType<Entity>().ToList();
-                Entity attacker = null;
+            List<Entity> es = FindObjectsOfType<Entity>().ToList();
+            Entity attacker = null;
 
-                foreach (Entity e in es)
-                    if (e.TryGetComponent<PhotonView>(out var v))
-                        if (v.ViewID == attackerViewId)
-                            attacker = e;
+            foreach (Entity e in es)
+                if (e.TryGetComponent<PhotonView>(out var v))
+                    if (v.ViewID == attackerViewId)
+                        attacker = e;
 
-                if (attacker != null)
-                    TakeDamage(amount, attacker, (DamageData.DamageType)type);
-            }
+            if (attacker != null)
+                TakeDamage(amount, attacker, (DamageData.DamageType)type);
         }
         [PunRPC]
         private void RPC_HealOwner(float amount)
@@ -244,17 +252,17 @@ namespace Assets.Scripts.Entities
                 liquids.SetLiquidAmount(liquids.GetLiquids.IndexOf(bloodRef), Mathf.Lerp(bloodRef.amount, normalBloodAmount, Mathf.Clamp(Health / BaseHealth, 0f, maxRegenAmount)));
             }
             else
-                view.RPC("RPC_HealOwner", RpcTarget.All, amount);
+                view.RPC(nameof(RPC_HealOwner), view.Owner, amount);
         }
         public void TakeDamage(float amount, Entity attacker, DamageData.DamageType type)
         {
-            if ((DamageSensors.Contains(type) && !Invulnerable) || DataContainer.DamageProperties[type].IgnoreDefence || DataContainer.DamageProperties[type].InvulnerabilityMitigation > 0f)
+            if (view.IsMine)
             {
-                if (Invulnerable && DataContainer.DamageProperties[type].InvulnerabilityMitigation > 0f)
-                    amount *= DataContainer.DamageProperties[type].InvulnerabilityMitigation;
-
-                if (view.IsMine)
+                if ((DamageSensors.Contains(type) && !Invulnerable) || DataContainer.DamageProperties[type].IgnoreDefence || DataContainer.DamageProperties[type].InvulnerabilityMitigation > 0f)
                 {
+                    if (Invulnerable && DataContainer.DamageProperties[type].InvulnerabilityMitigation > 0f)
+                        amount *= DataContainer.DamageProperties[type].InvulnerabilityMitigation;
+
                     if (!DataContainer.DamageProperties[type].IgnoreDefence)
                         OnDamageTakenForEffects?.Invoke(ref amount, type, attacker);
 
@@ -262,15 +270,15 @@ namespace Assets.Scripts.Entities
 
                     StartCoroutine(ApplyBloodloss(amount));
                 }
-                else
-                    view.RPC("RPC_TakeDamageToOwner", RpcTarget.All, amount, attacker.GetComponent<PhotonView>().ViewID, (int)type);
             }
+            else
+                view.RPC(nameof(RPC_TakeDamageToOwner), view.Owner, amount, attacker.GetComponent<PhotonView>().ViewID, (int)type);
         }
         public void Kill()
         {
-            TakeDamage(Health, this, DamageData.DamageType.Generic);
+            TakeDamage(Health * 1.5f, this, DamageData.DamageType.Generic);
         }
-        public void ToggleInvulnerability(bool state) => Invulnerable = state;
+        public void SetHealth(float health) => Health = Mathf.Clamp(health, 0f, BaseHealth);
     }
 
     public enum EntityType : byte

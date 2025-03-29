@@ -16,6 +16,8 @@ MonoBehaviour:
   <Id>k__BackingField: 1
   <Weight>k__BackingField: 0
   <ColliderScale>k__BackingField: {x: 0, y: 0, z: 0}
-  <prefab>k__BackingField: {fileID: 0}
+  <Crosshair>k__BackingField: 2
+  <ActionCrosshair>k__BackingField: 1
+  <prefab>k__BackingField: 
   <Icon>k__BackingField: {fileID: 21300000, guid: 54a1800a58e91b14780037e05d06be18,
     type: 3}

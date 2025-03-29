@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: PhotonServerSettings
   m_EditorClassIdentifier: 
   AppSettings:
-    AppIdRealtime: 
+    AppIdRealtime: 3ace60b9-ec53-404c-888d-2dd7a85b8469
     AppIdFusion: 
     AppIdChat: 
     AppIdVoice: 
@@ -66,6 +66,23 @@ MonoBehaviour:
   - SetNametag
   - RPC_ApplyEffect
   - RPC_RemoveEffect
+  - ShowMessageNative
+  - HandleMessage
+  - RPC_RemoveEffectByType
+  - SetSize
+  - SyncName
+  - WriteVector
+  - AddDroppedItem
+  - AddEntity
+  - AddObject
+  - WriteElement
+  - RPC_SetRights
+  - RPC_AddItem
+  - RPC_AddItemByIndex
+  - RPC_RemoveItem
+  - PlaySound
+  - StopSound
+  - RPC_ClearEffects
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

@@ -33,13 +33,14 @@ namespace Assets.Scripts.Movement
         [Min(0f)][SerializeField] private float camRotLerpSpeed;
 
         [Header("Noise Rotation Properties")]
+        [SerializeField] private float shiftBonus;
+        [SerializeField] private float dynamicRotStabilizationSpeed;
         [Min(0f)][SerializeField] private float noiseGenerationSpeed;
         [SerializeField] private float noiseLerpSpeed;
         [SerializeField] private Vector3 noiseRotation;
         [SerializeField] private Vector3 dynamicRotAmplitudeFactor;
         [SerializeField] private float dynamicRotFrequencyFactor;
-
-        public InputState inputSource;
+        [SerializeField] private AnimationCurve dynamicRotCurve;
 
         private PlayerMovementLogic playerMovement => GetComponent<PlayerMovementLogic>();
         private InventoryDataController inventory => GetComponent<InventoryDataController>();
@@ -47,6 +48,9 @@ namespace Assets.Scripts.Movement
         private Rigidbody rb => GetComponent<Rigidbody>();
         private PhotonView view => GetComponent<PhotonView>();
 
+        private float shiftPressBonus => inputSource.BoolBinds[InputHandler.InputBind.RUNSTATE] ? shiftBonus : 1f;
+
+        private InputState inputSource;
         private float xRot;
         private float zRot;
         private float defaultFov;
@@ -57,6 +61,8 @@ namespace Assets.Scripts.Movement
         private float recoilOffset;
         private float healthAspect;
         private float velocity;
+        private float aimedFovOffset;
+        private bool aimed;
         private Vector3 collCenter;
         private Vector3 _dynamicRotAmplitudeFactor;
         private Vector3 dynamicOffset;
@@ -69,19 +75,26 @@ namespace Assets.Scripts.Movement
         private Quaternion targetRot;
         private Transform cameraTransform;
 
-        public void Init()
+        public void Init(InputState inputSource)
         {
+            this.inputSource = inputSource;
+
             defaultFov = cam.fieldOfView;
             cameraTransform = cam.transform;
 
             inventory.OnItemAdded += HandleItemChange;
             inventory.OnItemRemoved += HandleItemChange;
-            inventory.OnItemSwitched += HandleItemChange;
+            inventory.OnItemSwitched += () => HandleItemChange(string.Empty);
         }
         private void Update()
         {
             if (view.IsMine)
             {
+                if (playerMovement.IsWaking)
+                    _dynamicRotAmplitudeFactor = Vector3.Lerp(_dynamicRotAmplitudeFactor, dynamicRotAmplitudeFactor, dynamicRotStabilizationSpeed * Time.deltaTime);
+                else
+                    _dynamicRotAmplitudeFactor = Vector3.zero;
+
                 keyInput = new Vector3(inputSource.VectorBinds[InputHandler.InputBind.WASD].x, 0f, inputSource.VectorBinds[InputHandler.InputBind.WASD].y);
                 mouseInput = inputSource.VectorBinds[InputHandler.InputBind.LOOK] * Sensitivity;
 
@@ -89,14 +102,19 @@ namespace Assets.Scripts.Movement
                 noiseRot = Vector3.Lerp(noiseRot, generatedNoise, noiseRotLerpSpeed * Time.deltaTime);
 
                 xRot -= mouseInput.y + recoilOffset;
-                dynamicOffset = _dynamicRotAmplitudeFactor * Mathf.Cos(Time.time * _dynamicRotFreqerencyFactor);
+
+                float curveValue = dynamicRotCurve.Evaluate((Mathf.Sin(Time.time * _dynamicRotFreqerencyFactor) + 1f) / 2f);
+                dynamicOffset = _dynamicRotAmplitudeFactor * curveValue * shiftPressBonus * Time.deltaTime;
+
                 zRot = Mathf.Lerp(zRot, (-mouseInput.x * zLookOffset) + (keyInput.x * zWalkLookOffset), zLookOffsetSpeed * Time.deltaTime);
 
                 transform.Rotate(Vector3.up * mouseInput.x);
-                targetRot = Quaternion.Euler(Mathf.Clamp(xRot + jumpCameraOffset * rb.velocity.y, -maxCamRotY, maxCamRotY), 0f, -zRot) * Quaternion.Euler(dynamicOffset * (playerMovement.IsWaking ? 1f : 0f)) * Quaternion.Euler(noiseRot);
+                targetRot = Quaternion.Euler(Mathf.Clamp(xRot + jumpCameraOffset * rb.velocity.y, -maxCamRotY, maxCamRotY), 0f, -zRot) *
+                            Quaternion.Euler(dynamicOffset) *
+                            Quaternion.Euler(noiseRot);
 
-                cameraTransform.transform.localRotation = Quaternion.Slerp(cam.transform.localRotation, targetRot, camRotLerpSpeed * Time.deltaTime);
-                cam.fieldOfView = Mathf.Clamp(Mathf.Lerp(cam.fieldOfView, defaultFov + playerMovement.CurrentVelocity * fovOffsetAmount, fovLerpSpeed * Time.deltaTime), 0f, maxFov);
+                cameraTransform.localRotation = Quaternion.Slerp(cam.transform.localRotation, targetRot, camRotLerpSpeed * Time.deltaTime);
+                cam.fieldOfView = Mathf.Clamp(Mathf.Lerp(cam.fieldOfView, (aimed ? aimedFovOffset : defaultFov) + playerMovement.CurrentVelocity * fovOffsetAmount, fovLerpSpeed * Time.deltaTime), 0f, maxFov);
 
                 healthAspect = Mathf.Max(player.Health / player.BaseHealth, 0.7f);
                 velocity = Mathf.Clamp(playerMovement.CurrentVelocity, 0.4f, 1f);
@@ -118,20 +136,28 @@ namespace Assets.Scripts.Movement
                 Random.Range(-curNoiseRot.z, curNoiseRot.z));
         }
 
-        private void HandleItemChange()
+        private void HandleItemChange(string name)
         {
             if (inventory.GetItems[inventory.CurrentItemIndex].data is BaseWeaponData baseWeapon)
             {
                 savedRecoil = baseWeapon.Recoil;
+                aimedFovOffset = baseWeapon.AimedFovChange;
 
                 WeaponDataController weapon = inventory.AllInGameItems.Find(n => n.BaseData.Id == baseWeapon.Id) as WeaponDataController;
                 if (weapon != null)
                 {
                     weapon.OnFire -= HandleRecoil;
                     weapon.OnFire += HandleRecoil;
+
+                    weapon.OnAimed -= () => OnAimed(true);
+                    weapon.OnUnAimed -= () => OnAimed(false);
+
+                    weapon.OnAimed += () => OnAimed(true);
+                    weapon.OnUnAimed += () => OnAimed(false);
                 }
             }
         }
+        private void OnAimed(bool v) => aimed = v;
         private void HandleRecoil() => recoilOffset = savedRecoil;
     }
 }

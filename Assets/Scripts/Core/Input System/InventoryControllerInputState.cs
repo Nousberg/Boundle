@@ -4,7 +4,7 @@ namespace Assets.Scripts.Core.Input_System
 {
     public class InventoryControllerInputState : InputState
     {
-        public override void Init()
+        public InventoryControllerInputState()
         {
             ActiveBinds.Add(InputSystem.InputHandler.InputBind.EQUIP, true);
             ActiveBinds.Add(InputSystem.InputHandler.InputBind.DROP, true);

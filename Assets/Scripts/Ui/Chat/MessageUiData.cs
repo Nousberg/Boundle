@@ -15,30 +15,29 @@ namespace Assets.Scripts.Ui.Chat
         [SerializeField] private Ease animationEase;
         [SerializeField] private float animationDuration;
 
-        public event Action<MessageUiData> OnDestroyEvent;
+        public event Action OnDestroyEvent;
 
-        public Guid Id { get; private set; }
+        public string Id { get; private set; }
 
-        public void Init(Guid id)
+        public void Init(string id, bool animated)
         {
             Id = id;
 
+            if (!animated)
+                return;
+
             Sequence sequence = DOTween.Sequence();
 
-            sequence.AppendInterval(animationDuration / 2f);
-
-            sequence.Join(Content
-                .DOFade(0f, animationDuration / 8f));
+            sequence.AppendInterval(animationDuration)
+                .Append(Content
+                    .DOFade(0f, animationDuration / 4f));
 
             sequence.OnComplete(() => {
-
-                DOTween.Kill(sequence);
-
-                OnDestroyEvent?.Invoke(this);
+                OnDestroyEvent?.Invoke();
                 Destroy(gameObject);
             } )
-                    .SetEase(animationEase)
-                    .SetUpdate(UpdateType.Normal, true);
+                .SetEase(animationEase)
+                .SetUpdate(UpdateType.Normal, true);
         }
     }
 }

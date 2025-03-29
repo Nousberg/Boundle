@@ -9,20 +9,30 @@ namespace Assets.Scripts.Entities.Abilities
         [Header("Properties")]
         [Range(0f, 1f)][SerializeField] private float criticalDamage;
 
-        private bool usable = true;
+        private bool usable;
 
         private Entity player => GetComponent<Entity>();
         private MovementController playerMovement => GetComponent<MovementController>();
 
-        public void Init() => player.OnDamageTaken += CheckDamageConditions;
+        protected override void OnInit()
+        {
+            player.OnDamageTaken += CheckDamageConditions;
+        }
 
         protected override void ToggleAbility()
         {
+            if (gameObject == null)
+                return;
+
             if (usable)
                 playerMovement.ToggleFly(true);
         }
+
         protected override void OnDeactivate()
         {
+            if (gameObject == null)
+                return;
+
             playerMovement.ToggleFly(false);
         }
 
@@ -33,11 +43,17 @@ namespace Assets.Scripts.Entities.Abilities
             if (!usable)
                 Deactivate();
         }
-        
+
         private void CheckDamageConditions(float amount)
         {
             if (amount > player.BaseHealth * criticalDamage)
                 Deactivate();
+        }
+
+        private void OnDestroy()
+        {
+            if (player != null)
+                player.OnDamageTaken -= CheckDamageConditions;
         }
     }
 }

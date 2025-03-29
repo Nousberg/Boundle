@@ -1,8 +1,9 @@
-﻿using Assets.Scripts.Entities.Abilities.Scriptables;
+﻿using Assets.Scripts.Core.Input_System;
+using Assets.Scripts.Core.InputSystem;
+using Assets.Scripts.Entities.Abilities.Scriptables;
 using Photon.Pun;
 using System.Collections;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace Assets.Scripts.Entities.Abilities
 {
@@ -13,24 +14,29 @@ namespace Assets.Scripts.Entities.Abilities
         private PhotonView view => GetComponent<PhotonView>();
 
         private bool toggled;
+        private InputState inputSource;
 
-        private void Update()
+        private void IfToggled(InputHandler.InputBind bind)
         {
-            if (view.IsMine)
+            if (bind == data.KeyBind)
             {
-                if (Keyboard.current[data.KeyBind].wasPressedThisFrame)
-                {
-                    toggled = !toggled;
-
-                    if (toggled)
-                        StartCoroutine(nameof(AbilityActivator));
-                    if (!toggled)
-                        OnDeactivate();
-                }
+                toggled = !toggled;
 
                 if (toggled)
-                    SafeUpdate();
+                    StartCoroutine(nameof(AbilityActivator));
+                if (!toggled)
+                    OnDeactivate();
             }
+
+            if (toggled)
+                SafeUpdate();
+        }
+
+        public void Init(InputState inputSource)
+        {
+            this.inputSource = inputSource;
+            inputSource.InputRecieved += IfToggled;
+            OnInit();
         }
 
         public void Activate()
@@ -38,6 +44,7 @@ namespace Assets.Scripts.Entities.Abilities
             toggled = true;
             StartCoroutine(nameof(AbilityActivator));
         }
+
         public void Deactivate()
         {
             toggled = false;
@@ -49,12 +56,22 @@ namespace Assets.Scripts.Entities.Abilities
         {
             yield return new WaitForSeconds(data.StartDelay);
             ToggleAbility();
-            yield return new WaitForSeconds(data.Duration);
-            OnDeactivate();
+
+            if (data.Duration != float.PositiveInfinity)
+            {
+                yield return new WaitForSeconds(data.Duration);
+                OnDeactivate();
+            }
         }
 
         protected abstract void OnDeactivate();
         protected abstract void ToggleAbility();
+        protected virtual void OnInit() { }
         protected virtual void SafeUpdate() { }
+
+        private void OnDestroy()
+        {
+            inputSource.InputRecieved -= IfToggled;
+        }
     }
 }

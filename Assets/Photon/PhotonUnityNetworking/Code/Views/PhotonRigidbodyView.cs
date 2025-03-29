@@ -14,7 +14,7 @@ namespace Photon.Pun
         private Vector3 m_NetworkPosition;
         private Quaternion m_NetworkRotation;
 
-        [SerializeField] private bool syncGravityUse;
+        public bool syncGravityUse;
 
         [HideInInspector]
         public bool m_SynchronizeVelocity = true;

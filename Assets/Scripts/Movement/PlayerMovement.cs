@@ -3,6 +3,7 @@ using Assets.Scripts.Core.InputSystem;
 using Assets.Scripts.Entities;
 using Assets.Scripts.Ui.Player;
 using Photon.Pun;
+using System;
 using UnityEngine;
 
 namespace Assets.Scripts.Movement
@@ -17,17 +18,20 @@ namespace Assets.Scripts.Movement
         [SerializeField] private Camera cam;
 
         [Header("Movement")]
+        [SerializeField] private float landingVelocity;
         [SerializeField] private float keyInfluenceSpeed;
         [Min(0f)][SerializeField] private float feetLength;
         [Min(0f)][SerializeField] private float lockedMoveLerpSpeed;
         [Min(0f)][SerializeField] private float flyLerpSpeed;
 
+        public event Action<float> OnLanded;
+
         public float CurrentVelocity { get; private set; }
         public bool isFlying { get; private set; }
         public bool IsGrounded { get; private set; }
+        public bool IsWalkingAttemp { get; private set; }
         public bool IsWaking { get; private set; }
-
-        public InputState inputSource;
+        public bool IsRunning { get; private set; }
 
         private PhotonView view => GetComponent<PhotonView>();
         private Rigidbody rb => GetComponent<Rigidbody>();
@@ -35,6 +39,7 @@ namespace Assets.Scripts.Movement
         private TouchscreenJoystick joystick => GetComponent<TouchscreenJoystick>();
         private Entity player => GetComponent<Entity>();
 
+        private InputState inputSource;
         private float collSize;
         private float healthAspect;
         private float currentFlyLerpSpeed;
@@ -43,8 +48,10 @@ namespace Assets.Scripts.Movement
         private Vector3 moveVector;
         private Transform camTransform;
 
-        public void Init()
+        public void Init(InputState inputSource)
         {
+            this.inputSource = inputSource;
+
             collSize = coll.height;
             collCenter = coll.center;
 
@@ -55,12 +62,17 @@ namespace Assets.Scripts.Movement
 
             inputSource.InputRecieved += Jump;
         }
+
         private void Update()
         {
             if (view.IsMine)
             {
+                CurrentVelocity = rb.velocity.magnitude;
+
                 keyInput = new Vector3(inputSource.VectorBinds[InputHandler.InputBind.WASD].x, 0f, inputSource.VectorBinds[InputHandler.InputBind.WASD].y);
                 IsWaking = keyInput.sqrMagnitude > 0f && IsGrounded;
+                IsWalkingAttemp = keyInput.sqrMagnitude > 0f;
+                IsRunning = inputSource.BoolBinds[InputHandler.InputBind.RUNSTATE];
 
                 if (isFlying)
                 {
@@ -77,7 +89,7 @@ namespace Assets.Scripts.Movement
 
                         Vector3 moveDirection = cameraForward * keyInput.z + cameraRight * keyInput.x;
 
-                        rb.velocity = Vector3.Lerp(rb.velocity, moveDirection * (inputSource.BoolBinds[InputHandler.InputBind.RUNSTATE]() ? flySpeed * runSpeedBoost : flySpeed), currentFlyLerpSpeed * Time.deltaTime);
+                        rb.velocity = Vector3.Lerp(rb.velocity, moveDirection * (IsRunning ? flySpeed * runSpeedBoost : flySpeed), currentFlyLerpSpeed * Time.deltaTime);
                     }
                     else
                         rb.velocity = Vector3.Lerp(rb.velocity, Vector3.zero, currentFlyLerpSpeed * Time.deltaTime);
@@ -88,13 +100,11 @@ namespace Assets.Scripts.Movement
                     InvokeMoveEvent();
 
                     moveVector = Vector3.Lerp(moveVector, transform.TransformDirection(keyInput) *
-                        (inputSource.BoolBinds[InputHandler.InputBind.RUNSTATE]() ? currentWalkSpeed * runSpeedBoost : currentWalkSpeed), keyInfluenceSpeed * Time.deltaTime);
+                        (inputSource.BoolBinds[InputHandler.InputBind.RUNSTATE] ? currentWalkSpeed * runSpeedBoost : currentWalkSpeed), keyInfluenceSpeed * Time.deltaTime);
                     moveVector.y = rb.velocity.y;
 
                     rb.velocity = moveVector;
                 }
-
-                CurrentVelocity = rb.velocity.magnitude;
 
                 healthAspect = Mathf.Max(player.Health / player.BaseHealth, 0.45f);
                 currentWalkSpeed = data.WalkSpeed * healthAspect;
@@ -103,26 +113,21 @@ namespace Assets.Scripts.Movement
                 runSpeedBoost = Mathf.Max(data.RunSpeedBoost * healthAspect, 1f);
                 currentFlyLerpSpeed = flyLerpSpeed * healthAspect;
             }
-            if (view.IsMine)
-            {
-                if (isFlying)
-                    rb.velocity = Vector3.Lerp(rb.velocity, Vector3.zero, currentFlyLerpSpeed * Time.deltaTime);
-                else if (!isFlying && IsGrounded)
-                {
-                    Vector3 targetVel = rb.velocity;
-                    targetVel.x = Mathf.Lerp(targetVel.x, 0f, currentWalkSpeed * Time.deltaTime);
-                    targetVel.z = Mathf.Lerp(targetVel.z, 0f, currentWalkSpeed * Time.deltaTime);
-
-                    rb.velocity = targetVel;
-                }
-            }
         }
+
         public void Jump(InputHandler.InputBind bind)
         {
             if (bind == InputHandler.InputBind.JUMP && (IsGrounded || isFlying))
                 rb.AddForce(Vector3.up * jumpPower, ForceMode.Impulse);
         }
 
+        private void OnCollisionEnter(Collision collision)
+        {
+            float contactSpeed = collision.relativeVelocity.magnitude;
+
+            if (contactSpeed >= landingVelocity)
+                OnLanded?.Invoke(contactSpeed);
+        }
         private void FixedUpdate()
         {
             if (view.IsMine)
@@ -131,6 +136,7 @@ namespace Assets.Scripts.Movement
                 IsGrounded = Physics.Raycast(feets.position, -feets.up, out hit, feetLength);
             }
         }
+
         private void ResetMovement()
         {
             currentWalkSpeed = data.WalkSpeed;
@@ -143,6 +149,12 @@ namespace Assets.Scripts.Movement
         {
             rb.useGravity = !state;
             isFlying = state;
+        }
+
+        private void OnDestroy()
+        {
+            if (inputSource != null)
+                inputSource.InputRecieved -= Jump;
         }
     }
 }

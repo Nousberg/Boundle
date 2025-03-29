@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using Photon.Pun;
-using System.Collections;
 
 namespace Assets.Scripts.Core.Environment
 {
@@ -19,13 +18,9 @@ namespace Assets.Scripts.Core.Environment
         public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
         {
             if (stream.IsWriting)
-            {
                 stream.SendNext(Temperature);
-            }
             else
-            {
                 Temperature = (float)stream.ReceiveNext();
-            }
         }
 
         private void FixedUpdate()

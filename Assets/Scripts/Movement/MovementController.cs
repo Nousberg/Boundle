@@ -12,13 +12,19 @@ namespace Assets.Scripts.Movement
 
         public event MovementHandler OnMove;
 
+        public bool IsFlying { get; protected set; }
+
         protected float flySpeed;
         protected float runSpeedBoost;
         protected float jumpPower;
         protected bool isCrouch;
         protected float currentWalkSpeed;
 
-        public void ToggleFly(bool state) => HandleFlyToggle(state);
+        public void ToggleFly(bool state)
+        {
+            HandleFlyToggle(state);
+            IsFlying = state;
+        }
 
         protected abstract void HandleFlyToggle(bool state);
 

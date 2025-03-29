@@ -264,6 +264,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f0db25fd93fc5ae469993b6a352ef7e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  effects: {fileID: 795165063735693548}
+  inventory: {fileID: 0}
   <MyType>k__BackingField: 1
   criticalFallVelocity: 5
   temperatureResistance: 0.873
@@ -279,8 +281,8 @@ MonoBehaviour:
   maxRegenAmount: 0.062
   regenerationRate: 16.18
   <BaseHealth>k__BackingField: 150
-  <Invulnerable>k__BackingField: 0
-  <DamageSensors>k__BackingField: 010203
+  Invulnerable: 0
+  DamageSensors: 0201
   <Health>k__BackingField: 10
 --- !u!114 &9006643888755122944
 MonoBehaviour:
@@ -336,7 +338,7 @@ Rigidbody:
   m_IsKinematic: 0
   m_Interpolate: 0
   m_Constraints: 0
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
 --- !u!114 &795165063735693548
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -365,13 +367,14 @@ MonoBehaviour:
   Group: 0
   prefixField: -1
   Synchronization: 2
-  OwnershipTransfer: 0
+  OwnershipTransfer: 2
   observableSearch: 2
   ObservedComponents:
   - {fileID: 3573805903058697892}
   - {fileID: 186740133729326751}
   - {fileID: 5311715715725095637}
   - {fileID: 4098439952510321274}
+  - {fileID: 2933644060489300815}
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
@@ -388,8 +391,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   <ObjectId>k__BackingField: 4
-  <Icon>k__BackingField: {fileID: 0}
-  <Category>k__BackingField: 1
+  <SpawnOffset>k__BackingField: {x: 0, y: 0.5, z: 0}
 --- !u!114 &5311715715725095637
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -422,7 +424,7 @@ MonoBehaviour:
   m_SynchronizeVelocity: 0
   m_SynchronizeAngularVelocity: 0
   m_TeleportEnabled: 1
-  m_TeleportIfDistanceGreaterThan: 3
+  m_TeleportIfDistanceGreaterThan: 16
 --- !u!114 &2933644060489300815
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -435,9 +437,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ff77bab1dab585f4f9c0ff7c1b7a6186, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  <Nametag>k__BackingField: 
-  immutableNametag: 0
   <EntityRights>k__BackingField: 3
+  immutableNametag: 0
+  <Nametag>k__BackingField: Test
+  <UUID>k__BackingField: 
 --- !u!1 &5380059430812269848
 GameObject:
   m_ObjectHideFlags: 0
