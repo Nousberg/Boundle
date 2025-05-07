@@ -4,12 +4,19 @@ using Assets.Scripts.Inventory.DynamicData;
 using Assets.Scripts.Inventory.Scriptables;
 using Photon.Pun;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Assets.Scripts.Inventory
 {
     public abstract class WeaponDataController : ItemDataController
     {
+        private Dictionary<LiquidContainer.LiquidType, float> bulletSlowdownValueByLiquid = new Dictionary<LiquidContainer.LiquidType, float>()
+        { 
+            { LiquidContainer.LiquidType.Water, 0.55f },
+            { LiquidContainer.LiquidType.Acid, 0.25f },
+        };
+
         [field: SerializeField] protected Entity carrier { get; private set; }
 
 
@@ -27,6 +34,7 @@ namespace Assets.Scripts.Inventory
         public event Action OnFire;
         public event Action OnAmmoChanged;
         public event Action OnReload;
+        public event Action OnReloadEnd;
 
         protected DynamicWeaponData weaponData;
         protected BaseWeaponData baseWeaponData;
@@ -36,6 +44,7 @@ namespace Assets.Scripts.Inventory
         protected void OutOfAmmoEvent() => OnOutOfAmmo?.Invoke();
         protected void AmmoChangeEvent() => OnAmmoChanged?.Invoke();
         protected void ReloadEvent() => OnReload?.Invoke();
+        protected void ReloadEndEvent() => OnReloadEnd?.Invoke();
         protected void AimedEvent() => OnAimed?.Invoke();
         protected void UnAimedEvent() => OnUnAimed?.Invoke();
 
@@ -62,15 +71,10 @@ namespace Assets.Scripts.Inventory
                         if (hit.collider.TryGetComponent<LiquidContainer>(out var liquids))
                         {
                             foreach (var liquid in liquids.GetLiquids)
-                                switch (liquid.type)
-                                {
-                                    case LiquidContainer.LiquidType.Water:
-                                        damage *= 0.75f;
-                                        break;
-                                    case LiquidContainer.LiquidType.Acid:
-                                        damage *= 0.25f;
-                                        break;
-                                }
+                            { 
+                                float liquidWeight = liquid.amount / liquids.Weight;
+                                damage *= bulletSlowdownValueByLiquid[liquid.type] * liquidWeight;
+                            }
                         }
                     
                         target.TakeDamage(damage /

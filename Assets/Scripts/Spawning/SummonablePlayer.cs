@@ -57,7 +57,10 @@ namespace Assets.Scripts.Spawning
 
                     cam.SetActive(true);
 
-                    soundController.Init();
+                    if (metaObject.TryGetComponent<SoundManager>(out var soundManager))
+                    {
+                        soundController.Init(soundManager);
+                    }
                     playerEntity.Init();
                     inventory.Init();
                 }

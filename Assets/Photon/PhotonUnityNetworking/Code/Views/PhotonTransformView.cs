@@ -74,6 +74,12 @@ namespace Photon.Pun
             }
         }
 
+        [PunRPC]
+        public void SetPosition(Vector3 position)
+        {
+            if (photonView.IsMine)
+                transform.position = position;
+        }
         public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
         {
             var tr = transform;

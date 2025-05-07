@@ -50,9 +50,9 @@ namespace Assets.Scripts.Network.Chat.Commands
             List<string> logTargest = new List<string>();
 
             foreach (var target in selector.targets)
-                if (target.TryGetComponent<EntityNetworkData>(out var networkData))
+                if (target.TryGetComponent<EntityNetworkData>(out var networkData) && target.TryGetComponent<PhotonTransformView>(out var tT))
                 {
-                    target.transform.position = new Vector3(x, y, z);
+                    tT.photonView.RPC(nameof(tT.SetPosition), tT.photonView.Owner, new Vector3(x, y, z));
                     logTargest.Add(networkData.Nametag);
                 }
 

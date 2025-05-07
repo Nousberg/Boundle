@@ -1,10 +1,10 @@
-using Assets.Scripts.Inventory.Scriptables;
+using Assets.Scripts.Core.Input_System;
+using Assets.Scripts.Core.InputSystem;
+using Assets.Scripts.Entities;
 using Assets.Scripts.Inventory;
+using Assets.Scripts.Inventory.Scriptables;
 using Assets.Scripts.Movement;
 using UnityEngine;
-using Assets.Scripts.Entities;
-using Assets.Scripts.Core.InputSystem;
-using Assets.Scripts.Core.Input_System;
 
 namespace Assets.Scripts.Ui.Inventory
 {
@@ -17,6 +17,7 @@ namespace Assets.Scripts.Ui.Inventory
         [SerializeField] private Rigidbody playerRb;
 
         [Header("Position Properties")]
+        [SerializeField] private Vector3 afterSwitchOffset;
         [SerializeField] private float swayAmount;
         [SerializeField] private float swayLerpSpeed;
 
@@ -26,6 +27,10 @@ namespace Assets.Scripts.Ui.Inventory
 
         [Header("Dynamic Rotation Properties")]
         [SerializeField] private Vector3 keyInfluence;
+        [SerializeField] private float walkBobbingMultiplier;
+        [SerializeField] private float walkBobbingFrequency;
+        [SerializeField] private float runBobbingMultiplier;
+        [SerializeField] private float runBobbingFrequency;
         [SerializeField] private float maxYRot;
         [SerializeField] private float runKeyBoost;
         [SerializeField] private float recoilLerpSpeed;
@@ -62,8 +67,22 @@ namespace Assets.Scripts.Ui.Inventory
 
             Vector3 mouseRot = inputSource.VectorBinds[InputHandler.InputBind.LOOK];
             Vector3 moveDir = inputSource.VectorBinds[InputHandler.InputBind.WASD];
+            Vector3 bobbing = Vector3.zero;
+            Vector3 targetPos = Vector3.zero;
 
-            Vector3 targetPos = (aimed ? aimedOffset : initialPos) + (-mouseRot * swayAmount);
+            targetPos = (aimed ? aimedOffset : initialPos) + (-mouseRot * swayAmount);
+
+            if (movement.IsWaking)
+            {
+                float frequency = (movement.IsRunning ? runBobbingFrequency : walkBobbingFrequency);
+                float multiplier = (movement.IsRunning ? runBobbingMultiplier : walkBobbingMultiplier);
+
+                bobbing.x = Mathf.Cos(Time.time * frequency / 2f) * multiplier;
+                bobbing.y = Mathf.Sin(Time.time * frequency) * multiplier;
+
+                targetPos += bobbing;
+            }
+
             targetPos.z -= recoilOffset;
 
             if (movement.IsWalkingAttemp)
@@ -81,6 +100,8 @@ namespace Assets.Scripts.Ui.Inventory
 
         private void HandleItemChange(string name)
         {
+            transform.localPosition += afterSwitchOffset;
+
             if (inventory.GetItems[inventory.CurrentItemIndex].data is BaseWeaponData baseWeapon)
             {
                 savedRecoil = baseWeapon.Recoil * recoilMultiplier;

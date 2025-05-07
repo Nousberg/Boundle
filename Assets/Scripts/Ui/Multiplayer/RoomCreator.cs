@@ -23,13 +23,13 @@ namespace Assets.Scripts.Ui.Multiplayer
         private SceneInfo scenes => GetComponent<SceneInfo>();
 
         private List<GameObject> scenePanels = new List<GameObject>();
-        public string buildedRoomBannerLink;
-        public string buildedRoomDesc;
-        public string buildedRoomName;
-        public int buildedRoomPlayers;
-        public int buildedRoomScene;
-        public bool buildedRoomPrivate;
-        public string buildedRoomPassword = string.Empty;
+        private string buildedRoomBannerLink;
+        private string buildedRoomDesc;
+        private string buildedRoomName;
+        private int buildedRoomPlayers;
+        private int buildedRoomScene;
+        private bool buildedRoomPrivate;
+        private string buildedRoomPassword = string.Empty;
 
         private void Start()
         {

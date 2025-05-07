@@ -22,6 +22,8 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 using Newtonsoft.Json;
 using Assets.Scripts.Interactables;
+using Assets.Scripts.Core;
+using Assets.Scripts.Core.Sound;
 
 namespace Assets.Scripts.Ui.Player
 {
@@ -35,6 +37,7 @@ namespace Assets.Scripts.Ui.Player
         [SerializeField] private TextMeshProUGUI environmentVolText;
         [SerializeField] private TextMeshProUGUI musicVolText;
         [SerializeField] private AudioMixer audioController;
+        [SerializeField] private Toggle fogToggle;
         [SerializeField] private Slider resolutionSlider;
         [SerializeField] private Slider masterVolSlider;
         [SerializeField] private Slider environmentVolSlider;
@@ -62,10 +65,10 @@ namespace Assets.Scripts.Ui.Player
         [SerializeField] private Volume menuEffects;
         [SerializeField] private TextMeshProUGUI resolutionLabel;
         [SerializeField] private Image bloodScreen;
+        [SerializeField] private GameObject fogGenerator;
         [SerializeField] private GameObject chatBox;
         [SerializeField] private CanvasGroup mainUiGroup;
         [SerializeField] private CanvasGroup settingsUiGroup;
-        [SerializeField] private Image ammoBackground;
         [SerializeField] private TextMeshProUGUI ammoText;
         [SerializeField] private GameObject ammoContainer;
         [SerializeField] private Transform itemIconsParent;
@@ -106,6 +109,7 @@ namespace Assets.Scripts.Ui.Player
         [Header("Inventory Properties")]
         [SerializeField] private Ease appearEase;
         [SerializeField] private float itemAppearAnimDuration;
+        [SerializeField] private float noAmmoContainerOpacity;
         [Range(0f, 1f)][SerializeField] private float selectedItemOpacity;
 
         private RectTransform settingsRect => settingsUiGroup.GetComponent<RectTransform>();
@@ -125,7 +129,6 @@ namespace Assets.Scripts.Ui.Player
 
         private int spectateTarget;
         private Interactable currentInteractable;
-        private SettingsPreset settingsPreset;
         private Cinemachine.CinemachineFreeLook currentSpecCam;
         private int currentCrosshair;
         private Sequence settingsAnim;
@@ -141,8 +144,6 @@ namespace Assets.Scripts.Ui.Player
         private bool isChatOpen;
         private bool spectator;
         private DepthOfField menuBlur;
-
-        private string settingsSavePath => Path.Combine(Application.persistentDataPath, "settings.json");
 
         public void Init(GameObject plrCam, Entity player, FlyAbility fly, PlayerMovementLogic playerMovement, InventoryDataController inventory, EntityNetworkData networkData, ToolgunDataController toolgun)
         {
@@ -200,38 +201,30 @@ namespace Assets.Scripts.Ui.Player
                 inst.GetComponent<Button>().onClick.AddListener(() => { toolgun.selectedObjectId = obj.Id; } );
             }
 
-            if (File.Exists(settingsSavePath))
-                try
-                {
-                    settingsPreset = JsonUtility.FromJson<SettingsPreset>(File.ReadAllText(settingsSavePath));
-                }
-                catch
-                {
-                    settingsPreset = new SettingsPreset();
-                }
-            else
-                settingsPreset = new SettingsPreset();
+            musicVolText.text = "Music: " + (int)DataContainer.settings.musicVol;
+            sfxVolText.text = "Sfx: " + (int)DataContainer.settings.sfxVol;
+            masterVolText.text = "Master: " + (int)DataContainer.settings.masterVol;
+            environmentVolText.text = "Environment: " + (int)DataContainer.settings.environmentVol;
+            quality.text = "Quality: " + DataContainer.settings.quality;
+            resolutionLabel.text = "Resolution: " + DataContainer.settings.resolution;
 
-            musicVolText.text = "Music: " + (int)settingsPreset.musicVol;
-            sfxVolText.text = "Sfx: " + (int)settingsPreset.sfxVol;
-            masterVolText.text = "Master: " + (int)settingsPreset.masterVol;
-            environmentVolText.text = "Environment: " + (int)settingsPreset.environmentVol;
-            quality.text = "Quality: " + settingsPreset.quality;
-            resolutionLabel.text = "Resolution: " + settingsPreset.resolution;
+            musicSlider.value = DataContainer.settings.musicVol;
+            masterVolSlider.value = DataContainer.settings.masterVol;
+            environmentVolSlider.value = DataContainer.settings.masterVol;
+            sfxSlider.value = DataContainer.settings.sfxVol;
+            resolutionSlider.value = DataContainer.settings.resolution;
+            masterVolSlider.value = DataContainer.settings.masterVol;
+            musicSlider.value = DataContainer.settings.musicVol;
+            sfxSlider.value = DataContainer.settings.sfxVol;
 
-            musicSlider.value = settingsPreset.musicVol;
-            masterVolSlider.value = settingsPreset.masterVol;
-            environmentVolSlider.value = settingsPreset.masterVol;
-            sfxSlider.value = settingsPreset.sfxVol;
-            resolutionSlider.value = settingsPreset.resolution;
-            masterVolSlider.value = settingsPreset.masterVol;
-            musicSlider.value = settingsPreset.musicVol;
-            sfxSlider.value = settingsPreset.sfxVol;
+            fogToggle.isOn = DataContainer.settings.renderFog;
+
+            fogGenerator.SetActive(DataContainer.settings.renderFog);
 
             if (!PhotonNetwork.OfflineMode)
                 serverPropertiesMenu.onClick.AddListener(() => windows.Open(19, 99));
 
-            ApplySettingsPreset();
+            ApplySettings();
         }
 
         public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer) => StartCoroutine(RefreshPlayerList());
@@ -255,7 +248,7 @@ namespace Assets.Scripts.Ui.Player
                         foreach (PhotonView view in FindObjectsOfType<PhotonView>())
                         {
                             if (view.Owner.ActorNumber == player.ActorNumber)
-                                view.RPC(nameof(PlayerNetworkManager.Kick), player, "banned");
+                                view.RPC(nameof(PlayerNetworkManager.Kick), player, "banned", true, false);
                         }
                     }
                 }
@@ -292,6 +285,8 @@ namespace Assets.Scripts.Ui.Player
 
                         ban.onClick.AddListener(() =>
                         {
+                            windows.Close(6);
+
                             if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(Connector.ROOM_BANLIST_KEY, out object banListObj))
                             {
                                 List<string> banned = JsonConvert.DeserializeObject<List<string>>(banListObj.ToString());
@@ -308,10 +303,12 @@ namespace Assets.Scripts.Ui.Player
 
                         kick.onClick.AddListener(() =>
                         {
+                            windows.Close(6);
+
                             foreach (PhotonView view in FindObjectsOfType<PhotonView>())
                             {
                                 if (view.Owner.ActorNumber == plr.ActorNumber)
-                                    view.RPC(nameof(PlayerNetworkManager.Kick), plr, "not specified");
+                                    view.RPC(nameof(PlayerNetworkManager.Kick), plr, "kicked", false, false);
                             }
                         });
 
@@ -460,19 +457,31 @@ namespace Assets.Scripts.Ui.Player
                     {
                         weapon.OnAmmoChanged -= UpdateItemInfo;
                         weapon.OnAmmoChanged += UpdateItemInfo;
+
+                        weapon.OnOutOfAmmo -= UpdateAmmoContainerOpacity;
+                        weapon.OnOutOfAmmo += UpdateAmmoContainerOpacity;
+
+                        weapon.OnReload -= UpdateAmmoContainerOpacity;
+                        weapon.OnReload += UpdateAmmoContainerOpacity;
+                        
+                        weapon.OnReloadEnd -= UpdateAmmoContainerOpacity;
+                        weapon.OnReloadEnd += UpdateAmmoContainerOpacity;
                     }
                 }
             }
 
             UpdateItemInfo();
         }
+        private void UpdateAmmoContainerOpacity()
+        {
+            if (inventory.GetItems[inventory.CurrentItemIndex] is DynamicWeaponData weapon)
+                ammoText.alpha = (weapon.reloadTime > 0f || weapon.currentAmmo < 1 ? noAmmoContainerOpacity : 1f);
+        }
         private void UpdateItemInfo()
         {
             if (inventory.GetItems[inventory.CurrentItemIndex] is DynamicWeaponData weapon && weapon.data is BaseWeaponData baseWeapon && baseWeapon.MyType != BaseWeaponData.WeaponType.Melee)
             {
                 ammoText.text = weapon.currentAmmo.ToString() + " / " + weapon.overallAmmo.ToString();
-                ammoBackground.fillAmount = (float)weapon.currentAmmo / weapon.overallAmmo;
-
                 ammoContainer.SetActive(true);
             }
             else
@@ -664,18 +673,18 @@ namespace Assets.Scripts.Ui.Player
             objectMenu.SetActive(value);
             objectMenuEnabled = value;
         }
-        public void ApplySettingsPreset()
+        public void ApplySettings()
         {
-            File.WriteAllText(settingsSavePath, JsonUtility.ToJson(settingsPreset));
+            File.WriteAllText(SettingsInitializer.SettingsSavePath, JsonUtility.ToJson(DataContainer.settings));
 
-            audioController.SetFloat("sfx", Mathf.Lerp(-80f, 0f, settingsPreset.sfxVol / 100f));
-            audioController.SetFloat("music", Mathf.Lerp(-80f, 0f, settingsPreset.musicVol / 100f));
-            audioController.SetFloat("master", Mathf.Lerp(-80f, 0f, settingsPreset.masterVol / 100f));
-            audioController.SetFloat("environment", Mathf.Lerp(-80f, 0f, settingsPreset.environmentVol / 100f));
+            audioController.SetFloat("sfx", Mathf.Lerp(-80f, 0f, DataContainer.settings.sfxVol / 100f));
+            audioController.SetFloat("music", Mathf.Lerp(-80f, 0f, DataContainer.settings.musicVol / 100f));
+            audioController.SetFloat("master", Mathf.Lerp(-80f, 0f, DataContainer.settings.masterVol / 100f));
+            audioController.SetFloat("environment", Mathf.Lerp(-80f, 0f, DataContainer.settings.environmentVol / 100f));
 
-            QualitySettings.SetQualityLevel(settingsPreset.quality);
+            QualitySettings.SetQualityLevel(DataContainer.settings.quality);
 
-            switch (settingsPreset.quality)
+            switch (DataContainer.settings.quality)
             {
                 case 2:
                     regularGraphics.enabled = true;
@@ -685,7 +694,7 @@ namespace Assets.Scripts.Ui.Player
                     break;
             }
 
-            UniversalRenderPipeline.asset.renderScale = settingsPreset.resolution / 100f;
+            UniversalRenderPipeline.asset.renderScale = DataContainer.settings.resolution / 100f;
         }
         public void SearchObject(string objName)
         {
@@ -699,36 +708,37 @@ namespace Assets.Scripts.Ui.Player
         }
         public void SetGraphicsLevel(int index)
         {
-            if (settingsPreset == null)
-                settingsPreset = new SettingsPreset(80, index);
-            else
-                settingsPreset.quality = index;
-
+            DataContainer.settings.quality = index;
             quality.text = "Quality: " + index;
+        }
+        public void SetRenderFog(bool value)
+        {
+            DataContainer.settings.renderFog = value;
+            fogGenerator.SetActive(value);
         }
         public void SetMainVol(float value)
         {
-            settingsPreset.masterVol = value;
+            DataContainer.settings.masterVol = value;
             masterVolText.text = "Master: " + (int)value;
         }
         public void SetMusicVol(float value)
         {
-            settingsPreset.musicVol = value;
+            DataContainer.settings.musicVol = value;
             musicVolText.text = "Music: " + (int)value;
         }
         public void SetSfxVol(float value)
         {
-            settingsPreset.sfxVol = value;
+            DataContainer.settings.sfxVol = value;
             sfxVolText.text = "Sfx: " + (int)value;
         }
         public void SetEnvironmentVol(float value)
         {
-            settingsPreset.environmentVol = value;
+            DataContainer.settings.environmentVol = value;
             environmentVolText.text = "Environment: " + (int)value;
         }
         public void SetRenderScale(float value)
         {
-            settingsPreset.resolution = (int)value;
+            DataContainer.settings.resolution = (int)value;
             resolutionLabel.text = $"Resolution: {value}";
         }
     }

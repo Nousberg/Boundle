@@ -6,7 +6,6 @@ using Photon.Pun;
 using System;
 using System.Collections;
 using UnityEngine;
-using static UnityEngine.GraphicsBuffer;
 
 namespace Assets.Scripts.Inventory
 {

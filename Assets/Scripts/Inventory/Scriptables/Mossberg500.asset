@@ -29,13 +29,15 @@ MonoBehaviour:
   <Recoil>k__BackingField: 25
   <FireRate>k__BackingField: 0.5
   <ReloadDuration>k__BackingField: 1
+  <ReloadSpeed>k__BackingField: 0.9
   <Range>k__BackingField: 100
   <BulletsPerShot>k__BackingField: 25
   <BaseAmmo>k__BackingField: 6
   <OverheatRate>k__BackingField: 0
   <CriticalOverheat>k__BackingField: 0
-  <FireSoundId>k__BackingField: 10
-  <ReloadSoundId>k__BackingField: 11
+  <FireSoundId>k__BackingField: 11
+  <ReloadSoundId>k__BackingField: 13
   <NoAmmoSoundId>k__BackingField: 12
+  <SoundSourceId>k__BackingField: 906
   <AimedFovChange>k__BackingField: 45
   <AimedPosition>k__BackingField: {x: -0.46, y: -0.48, z: -0.27}

@@ -21,7 +21,7 @@ namespace Assets.Scripts.Ui.Multiplayer
                     Camera[] cams = FindObjectsOfType<Camera>();
 
                     foreach (Camera c in cams)
-                        if (cm.GetInstanceID() != c.GetInstanceID() && c.gameObject.activeInHierarchy)
+                        if (cm.GetInstanceID() != c.GetInstanceID() && c.gameObject.activeInHierarchy && c.tag == "PlayerCam")
                         {
                             lookTarget = c.transform;
                             break;

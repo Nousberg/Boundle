@@ -10,8 +10,12 @@
         public int resolution;
         public int quality;
 
-        public SettingsPreset(int resolution = 80, int quality = 1, float masterVol = 0f, float musicVol = -20f, float sfxVol = -20f, float environmentVol = -20f)
+        public bool renderFog;
+
+        public SettingsPreset(bool renderFog = false, int resolution = 80, int quality = 1, float masterVol = 0f, float musicVol = -20f, float sfxVol = -20f, float environmentVol = -20f)
         {
+            this.renderFog = renderFog;
+
             this.resolution = resolution;
             this.quality = quality;
 

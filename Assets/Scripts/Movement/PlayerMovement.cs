@@ -23,11 +23,13 @@ namespace Assets.Scripts.Movement
         [Min(0f)][SerializeField] private float feetLength;
         [Min(0f)][SerializeField] private float lockedMoveLerpSpeed;
         [Min(0f)][SerializeField] private float flyLerpSpeed;
+        [SerializeField] private float underwaterSpeedModifier;
 
         public event Action<float> OnLanded;
 
         public float CurrentVelocity { get; private set; }
         public bool isFlying { get; private set; }
+        public bool isUnderwater { get; private set; }
         public bool IsGrounded { get; private set; }
         public bool IsWalkingAttemp { get; private set; }
         public bool IsWaking { get; private set; }
@@ -74,7 +76,7 @@ namespace Assets.Scripts.Movement
                 IsWalkingAttemp = keyInput.sqrMagnitude > 0f;
                 IsRunning = inputSource.BoolBinds[InputHandler.InputBind.RUNSTATE];
 
-                if (isFlying)
+                if (isFlying || isUnderwater)
                 {
                     if (keyInput.sqrMagnitude > 0.1f)
                     {
@@ -89,12 +91,12 @@ namespace Assets.Scripts.Movement
 
                         Vector3 moveDirection = cameraForward * keyInput.z + cameraRight * keyInput.x;
 
-                        rb.velocity = Vector3.Lerp(rb.velocity, moveDirection * (IsRunning ? flySpeed * runSpeedBoost : flySpeed), currentFlyLerpSpeed * Time.deltaTime);
+                        rb.velocity = Vector3.Lerp(rb.velocity, moveDirection * (isUnderwater ? underwaterSpeedModifier : 1f) * (IsRunning ? flySpeed * runSpeedBoost : flySpeed), currentFlyLerpSpeed * Time.deltaTime);
                     }
                     else
                         rb.velocity = Vector3.Lerp(rb.velocity, Vector3.zero, currentFlyLerpSpeed * Time.deltaTime);
                 }
-                else if (!isFlying && IsGrounded && keyInput.sqrMagnitude > 0f)
+                else if (!isFlying && !isUnderwater && IsGrounded && keyInput.sqrMagnitude > 0f)
                 {
                     ResetMovement();
                     InvokeMoveEvent();
@@ -149,8 +151,18 @@ namespace Assets.Scripts.Movement
         {
             rb.useGravity = !state;
             isFlying = state;
-        }
+            rb.drag = (state ? 0f : rb.drag);
 
+            if (state)
+                isUnderwater = false;
+        }
+        public void ToggleUnderwater(bool state)
+        {
+            if (IsFlying)
+                return;
+
+            isUnderwater = state;
+        }
         private void OnDestroy()
         {
             if (inputSource != null)

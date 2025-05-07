@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Assets.Scripts.Core;
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 namespace Assets.Scripts.Ui
@@ -7,6 +9,8 @@ namespace Assets.Scripts.Ui
     {
         [SerializeField] private List<GameObject> menus = new List<GameObject>();
         [SerializeField] private GameObject mainMenu;
+        [SerializeField] private GameObject kickedWindow;
+        [SerializeField] private TextMeshProUGUI kickedReason;
 
         public void DeactivateAll() => menus.ForEach(n => n.SetActive(false));
         public void ToMainMenu()

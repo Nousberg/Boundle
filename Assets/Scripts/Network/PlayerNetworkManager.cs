@@ -1,4 +1,5 @@
-﻿using Photon.Pun;
+﻿using Assets.Scripts.Core;
+using Photon.Pun;
 using UnityEngine;
 
 namespace Assets.Scripts.Network
@@ -8,7 +9,7 @@ namespace Assets.Scripts.Network
         public PhotonView view => GetComponent<PhotonView>();
 
         [PunRPC]
-        public void Kick(string reason = "not specified")
+        public void Kick(string reason = "not specified", bool isBan = false, bool native = false)
         {
             if (view.IsMine)
             {
@@ -16,6 +17,12 @@ namespace Assets.Scripts.Network
 
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
+
+                if (!native)
+                {
+                    DataContainer.wasBanned = isBan;
+                    DataContainer.wasKicked = !isBan;
+                }
             }
         }
     }

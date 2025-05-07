@@ -25,6 +25,7 @@ namespace Assets.Scripts.Network
         public const string PLAYER_ID_KEY = "id";
         public const string ROOM_HASHTABLE_MODS_KEY = "ModsData";
         public const string ADMIN_KEY = "admin";
+        public const string ROOM_HASHTABLE_TIME_KEY = "curtime";
 
         private const string CURRENT_ROOM_MODS_FOLDER = ModsLoader.MODS_FOLDER_PATH + "/CurrentRoom";
 
@@ -77,7 +78,7 @@ namespace Assets.Scripts.Network
             PhotonNetwork.ConnectUsingSettings();
         }
 
-        public void CreateRoom(string name, int maxPlayers, int sceneId, bool privateMode, string password = "", string description = "", string bannerLink = "")
+        public void CreateRoom(string name, int maxPlayers, int sceneId, bool privateMode,  string password = "", string description = "", string bannerLink = "")
         {
             if (maxPlayers < 0 || maxPlayers > ROOM_MAX_PLAYERS)
                 return;
@@ -110,6 +111,7 @@ namespace Assets.Scripts.Network
                 IsVisible = true,
                 CustomRoomProperties = new ExitGames.Client.Photon.Hashtable
                 {
+                    { ROOM_HASHTABLE_TIME_KEY, 12f },
                     { ROOM_HASHTABLE_ALLOW_DAMAGE_KEY, true },
                     { ROOM_HASHTABLE_MODS_KEY, JsonConvert.SerializeObject(modLinks) },
                     { ROOM_HASHTABLE_PRIVATE_KEY, privateMode },
@@ -128,7 +130,8 @@ namespace Assets.Scripts.Network
                     ROOM_HASHTABLE_PASS_KEY, 
                     ROOM_HASHTABLE_DESC_KEY, 
                     ROOM_HASHTABLE_SCENE_KEY,
-                    ROOM_HASHTABLE_BANNER_KEY
+                    ROOM_HASHTABLE_BANNER_KEY,
+                    ROOM_HASHTABLE_TIME_KEY,
                 }
             };
 
@@ -154,7 +157,7 @@ namespace Assets.Scripts.Network
 
             PhotonNetwork.OfflineMode = true;
             yield return new WaitForSeconds(0.1f);
-            PhotonNetwork.CreateRoom("dev", new RoomOptions { IsVisible = false, IsOpen = true });
+            PhotonNetwork.CreateRoom("Singleplayer Room", new RoomOptions { IsVisible = false, IsOpen = true });
             PhotonNetwork.LoadLevel(sceneIndex);
 
             OnRoomCreation?.Invoke();

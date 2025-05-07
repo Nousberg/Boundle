@@ -28,7 +28,6 @@ namespace Assets.Scripts.Core
 {
     public class Bootstrap : MonoBehaviour
     {
-        [field: SerializeField] public Image AmmoBackground { get; private set; }
         [field: SerializeField] public TextMeshProUGUI AmmoText { get; private set; }
         [field: SerializeField] public GameObject AmmoContainer { get; private set; }
         [field: SerializeField] public Transform ItemIconsParent { get; private set; }
@@ -130,7 +129,7 @@ namespace Assets.Scripts.Core
             visual.Init(plr.cam, plrEntity, plrFly, movement, plrInventory, eData, plr.toolgun);
             
             PlayerNetworkManager plrNetwork = player.GetComponent<PlayerNetworkManager>();
-            leave.onClick.AddListener(() => plrNetwork.Kick());
+            leave.onClick.AddListener(() => plrNetwork.Kick(native: true));
 
             crosshair.Init(movement, plrInventory, plrEntity);
         }

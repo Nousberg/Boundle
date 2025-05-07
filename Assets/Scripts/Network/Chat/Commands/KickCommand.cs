@@ -34,7 +34,7 @@ namespace Assets.Scripts.Network.Chat.Commands
             foreach (var target in selector.targets)
                 if (target != initiator && target.TryGetComponent<PhotonView>(out var view) && target.TryGetComponent<PlayerNetworkManager>(out var playerData) && target.TryGetComponent<EntityNetworkData>(out var entityData) && PhotonNetwork.IsMasterClient)
                 {
-                    view.RPC(nameof(PlayerNetworkManager.Kick), RpcTarget.All, kickReason);
+                    view.RPC(nameof(PlayerNetworkManager.Kick), RpcTarget.All, kickReason, false, false);
                     logTargets.Add(entityData.Nametag);
                 }
 

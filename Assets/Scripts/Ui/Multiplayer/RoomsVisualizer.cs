@@ -3,7 +3,10 @@ using Newtonsoft.Json;
 using Photon.Pun;
 using Photon.Realtime;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
+using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,8 +29,9 @@ namespace Assets.Scripts.Ui.Multiplayer
 
         private SceneInfo scenes => GetComponent<SceneInfo>();
 
-        private List<GameObject> roomObjects = new List<GameObject>();
+        private List<RoomElement> roomObjects = new List<RoomElement>();
         private string selectedRoom;
+        private string search = string.Empty;
         private Sprite selectedRoomBanner;
 
         private void Start()
@@ -52,7 +56,7 @@ namespace Assets.Scripts.Ui.Multiplayer
             else
                 noRoomsAlert.SetActive(false);
 
-            roomObjects.ForEach(n => Destroy(n));
+            roomObjects.ForEach(n => Destroy(n.gameObject));
             roomObjects.Clear();
 
             foreach (RoomInfo room in rooms)
@@ -60,6 +64,7 @@ namespace Assets.Scripts.Ui.Multiplayer
                 if (!room.IsVisible || room.PlayerCount < 1)
                     continue;
 
+                Debug.Log(room.Name);
                 string roomPass = room.CustomProperties[Connector.ROOM_HASHTABLE_PASS_KEY] == null ? string.Empty : room.CustomProperties[Connector.ROOM_HASHTABLE_PASS_KEY].ToString();
 
                 GameObject roomElement;
@@ -82,7 +87,7 @@ namespace Assets.Scripts.Ui.Multiplayer
                     roomData.Input.onEndEdit.AddListener(value => JoinRoomWithPassword(room.Name, value, roomPass));
                 }
 
-                roomObjects.Add(roomElement);
+                roomObjects.Add(roomData);
                 roomElement.transform.SetParent(roomsParent, false);
 
                 roomData.PlayersCount.text = room.PlayerCount + " / " + Connector.ROOM_MAX_PLAYERS;
@@ -95,7 +100,24 @@ namespace Assets.Scripts.Ui.Multiplayer
                 if (banlist.Contains(PlayerPrefs.GetString(Connector.PLAYER_ID_KEY)))
                     roomData.ToggleButton.interactable = false;
             }
+
+            int matches = 0;
+
+            foreach (var room in roomObjects)
+            {
+                if (room.Name.text.Contains(search))
+                {
+                    room.gameObject.SetActive(true);
+                    matches++;
+                }
+                else
+                    room.gameObject.SetActive(false);
+            }
+
+            if (matches == 0)
+                noRoomsAlert.SetActive(true);
         }
+        public void SearchRooms(string roomName) => search = roomName;
 
         private void JoinRoomWithPassword(string roomName, string inputPsw, string roomPsw)
         {
@@ -105,8 +127,14 @@ namespace Assets.Scripts.Ui.Multiplayer
         private void SelectRoom(RoomInfo info)
         {
             object desc = info.CustomProperties[Connector.ROOM_HASHTABLE_DESC_KEY];
-            string bannerUrl = info.CustomProperties[Connector.ROOM_HASHTABLE_BANNER_KEY].ToString();
+            string bannerUrl = string.Empty;
             int sceneIndex = (int)info.CustomProperties[Connector.ROOM_HASHTABLE_SCENE_KEY];
+
+            try
+            {
+                bannerUrl = info.CustomProperties[Connector.ROOM_HASHTABLE_BANNER_KEY].ToString();
+            }
+            catch { }
 
             if (selectedRoomBanner == null)
             {

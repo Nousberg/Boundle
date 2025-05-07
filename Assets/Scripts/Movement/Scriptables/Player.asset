@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: Player
   m_EditorClassIdentifier: 
   <WalkSpeed>k__BackingField: 8
-  <FlySpeed>k__BackingField: 16
+  <FlySpeed>k__BackingField: 24
   <RunSpeedBoost>k__BackingField: 1.5
   <JumpPower>k__BackingField: 7

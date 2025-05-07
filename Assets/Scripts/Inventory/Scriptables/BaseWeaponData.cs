@@ -15,6 +15,7 @@ namespace Assets.Scripts.Inventory.Scriptables
         [field: SerializeField] public float Recoil { get; private set; }
         [field: SerializeField] public float FireRate { get; private set; }
         [field: SerializeField] public float ReloadDuration { get; private set; }
+        [field: SerializeField] public float ReloadSpeed { get; private set; }
         [field: SerializeField] public float Range { get; private set; }
         [field: SerializeField] public int BulletsPerShot { get; private set; }
         [field: SerializeField] public int BaseAmmo { get; private set; }
@@ -26,6 +27,7 @@ namespace Assets.Scripts.Inventory.Scriptables
         [field: SerializeField] public int FireSoundId { get; private set; }
         [field: SerializeField] public int ReloadSoundId { get; private set; }
         [field: SerializeField] public int NoAmmoSoundId { get; private set; }
+        [field: SerializeField] public int SoundSourceId { get; private set; }
 
         [field: Header("Other")]
         [field: SerializeField] public float AimedFovChange { get; private set; }

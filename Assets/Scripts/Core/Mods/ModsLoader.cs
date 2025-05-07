@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System;
 using System.Collections.Generic;
+using Assets.Scripts.Ui.Multiplayer;
 
 namespace Assets.Scripts.Core.Mods
 {
@@ -12,9 +13,12 @@ namespace Assets.Scripts.Core.Mods
         public const string MOD_EXTENSION = "bmod";
         private const string MOD_MANIFEST = "manifest.json";
 
+        [SerializeField] private AlertManager alertManager;
+
         public event Action<ManifestData> OnModLoaded;
         public event Action<string> OnFailureLoad;
         public event Action OnReload;
+
         public List<string> LoadedMods { get; private set; } = new List<string>();
 
         public void ReloadMods()

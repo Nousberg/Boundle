@@ -12,6 +12,7 @@ namespace Assets.Scripts.Core.Environment
         [SerializeField] private float temperatureCombineDistance;
 
         [field: SerializeField] public float Temperature { get; private set; }
+        [field: SerializeField, Min(1f)] public float Weight { get; private set; }
 
         private PhotonView view => GetComponent<PhotonView>();
 

@@ -13,3 +13,12 @@ MonoBehaviour:
   m_Name: Water
   m_EditorClassIdentifier: 
   <AppliedEffects>k__BackingField: []
+  <dragModifier>k__BackingField: 4
+  <whileInTintIntensity>k__BackingField: 0.25
+  <objectWaveIntensity>k__BackingField: 0.5
+  <FoamInstantiateVelocity>k__BackingField: 24
+  <splashClip>k__BackingField: 900
+  <splashSource>k__BackingField: 0
+  <whileInColor>k__BackingField: {r: 0.1689213, g: 0.3833512, b: 0.49056602, a: 0}
+  <AfterEnterFoam>k__BackingField: {fileID: 5780884221625858855, guid: b5cd261072079444284ae51b156ec13a,
+    type: 3}

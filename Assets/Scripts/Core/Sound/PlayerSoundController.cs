@@ -3,7 +3,6 @@ using Assets.Scripts.Inventory.Scriptables;
 using Assets.Scripts.Movement;
 using UnityEngine;
 using Photon.Pun;
-using System.Collections.Generic;
 using Assets.Scripts.Entities;
 
 namespace Assets.Scripts.Core.Sound
@@ -11,128 +10,94 @@ namespace Assets.Scripts.Core.Sound
     [RequireComponent(typeof(PhotonView))]
     public class PlayerSoundController : MonoBehaviour
     {
+        [Header("Sources")]
+        [SerializeField] private AudioSource wind;
+        [SerializeField] private AudioSource tinnitus;
+        [SerializeField] private AudioSource weaponSwitch;
+        [SerializeField] private AudioSource steps;
+        [SerializeField] private AudioSource landing;
+        [SerializeField] private AudioSource weapon;
+
         [Header("References")]
-        [SerializeField] private List<SoundData> sfxSounds = new List<SoundData>();
-        [SerializeField] private List<int> stepSounds = new List<int>();
-        [SerializeField] private List<int> landSounds = new List<int>();
-        [SerializeField] private AudioReverbFilter reverb;
-        [SerializeField] private AudioClip tinnitusClip;
-        [SerializeField] private AudioClip windClip;
-        [SerializeField] private AudioSource tinnitusSource;
-        [SerializeField] private AudioSource windSource;
-        [SerializeField] private AudioSource stepsSource;
-        [SerializeField] private Entity player;
-        [SerializeField] private PlayerMovementLogic movement;
+        [SerializeField] private AudioReverbFilter reverbFilter;
         [SerializeField] private InventoryDataController inventory;
+        [SerializeField] private PlayerMovementLogic movement;
+        [SerializeField] private Entity entity;
 
         [Header("Properties")]
-        [Range(0f, 1f)][SerializeField] private float criticalHealth;
-        [SerializeField] private float minReverb;
-        [SerializeField] private float maxReverb;
-        [SerializeField] private float minSoundVolume;
-        [SerializeField] private float tinnitusSpeed;
-        [SerializeField] private float soundStopSpeed;
+        [SerializeField] private int itemSwitchClipId;
+        [SerializeField] private int itemSwitchSourceId;
+        [SerializeField] private float tinnitusLerpSpeed;
+        [SerializeField, Range(0f, 1f)] private float tinnitusHealthAspect;
 
         private PhotonView view => GetComponent<PhotonView>();
+        private SoundManager soundManager;
 
-        private float nextStep;
-
-        public void Init()
+        public void Init(SoundManager soundManager)
         {
-            inventory.OnItemAdded += HandleItemChange;
-            inventory.OnItemRemoved += HandleItemChange;
-            inventory.OnItemSwitched += () => HandleItemChange(string.Empty);
+            this.soundManager = soundManager;
 
-            movement.OnLanded += (speed) => { view.RPC(nameof(PlaySound), RpcTarget.All, sfxSounds.Find(n => n.id == landSounds[Random.Range(0, landSounds.Count - 1)]).id, speed / 25f, 1f, false, true); };
+            soundManager.AddSource(new SoundManager.SoundSource(901, weaponSwitch));
+            soundManager.AddSource(new SoundManager.SoundSource(902, steps));
+            soundManager.AddSource(new SoundManager.SoundSource(903, landing));
+            soundManager.AddSource(new SoundManager.SoundSource(904, tinnitus));
+            soundManager.AddSource(new SoundManager.SoundSource(905, wind));
+            soundManager.AddSource(new SoundManager.SoundSource(906, weapon));
 
-            SoundManager.Play(windSource, windClip, 1f, 0f, true);
-            SoundManager.Play(tinnitusSource, tinnitusClip, 1f, 0f, true);
+            inventory.OnItemSwitched += () => { 
+                WeaponSfx(itemSwitchSourceId, itemSwitchClipId);
+                UpdateReloadBase(string.Empty);
+            };
+            inventory.OnItemAdded += UpdateReloadBase;
+            inventory.OnItemRemoved += UpdateReloadBase;
+
+            soundManager.Play(904, 2, Vector3.zero, 1f, 1f, true);
+            soundManager.Play(905, 3, Vector3.zero, 1f, 1f, true);
         }
+
         private void Update()
         {
             if (!view.IsMine)
                 return;
 
-            float healthAspect = 1f - player.Health / player.BaseHealth;
-            float soundSpeed = tinnitusSpeed * Time.deltaTime;
-            float healthToTinnitus = 0f;
+            float healthAspect = entity.Health / entity.BaseHealth;
 
-            if (healthAspect > criticalHealth)
-            {
-                healthToTinnitus = Mathf.Lerp(tinnitusSource.volume, healthAspect, soundSpeed);
-                reverb.room = Mathf.Lerp(reverb.room, maxReverb * healthAspect, soundSpeed);
-            }
+            reverbFilter.room = Mathf.Lerp(0f, -10000f, movement.isUnderwater ? 0f : healthAspect);
+            reverbFilter.decayTime = Mathf.Lerp(20f, 0.1f, movement.isUnderwater ? 0f : healthAspect);
+
+            if (healthAspect < tinnitusHealthAspect)
+                tinnitus.volume = Mathf.Lerp(tinnitus.volume, 1f - healthAspect, tinnitusLerpSpeed * Time.deltaTime);
             else
-            {
-                healthToTinnitus = Mathf.Lerp(tinnitusSource.volume, 0f, tinnitusSpeed * Time.deltaTime);
-                reverb.room = Mathf.Lerp(reverb.room, minReverb, soundSpeed);
-            }
+                tinnitus.volume = Mathf.Lerp(tinnitus.volume, 0f, tinnitusLerpSpeed * Time.deltaTime);
 
-            tinnitusSource.pitch = healthToTinnitus;
-            tinnitusSource.volume = healthToTinnitus;
+            float windInfluence = movement.CurrentVelocity / 100f;
 
-            float velocityToWind = movement.CurrentVelocity / 100f;
-
-            windSource.pitch = velocityToWind;
-            windSource.volume = velocityToWind;
-
-            int randomSound = stepSounds[Random.Range(0, stepSounds.Count - 1)];
-            SoundData targetClip = sfxSounds.Find(n => n.id == stepSounds[Random.Range(0, stepSounds.Count - 1)]);
-
-            if (movement.IsWaking && Time.time >= nextStep)
-            {
-                float runBoost = movement.IsRunning ? 1.25f : 1f;
-
-                view.RPC(nameof(PlaySound), RpcTarget.All, targetClip.id, 1f, runBoost, false, false);
-
-                nextStep = Time.time + runBoost;
-            }
-            else if (!movement.IsWaking && targetClip.source.volume > minSoundVolume)
-                view.RPC(nameof(StopSound), RpcTarget.All, targetClip.id);
+            wind.volume = windInfluence;
+            wind.pitch = windInfluence;
         }
-        private void HandleItemChange(string name)
+        private void UpdateReloadBase(string name)
         {
-            if (inventory.GetItems[inventory.CurrentItemIndex].data is BaseWeaponData baseWeapon)
+            foreach (var item in inventory.GetItems)
             {
-                WeaponDataController weapon = inventory.AllInGameItems.Find(n => n.BaseData.Id == baseWeapon.Id) as WeaponDataController;
-                if (weapon != null)
+                BaseItemData itemData = item.data;
+                ItemDataController itemController = inventory.AllInGameItems.Find(n => n.BaseData.Id == itemData.Id);
+
+                if (itemData != null && itemController != null)
                 {
-                    weapon.OnFire -= () => HandleFire(baseWeapon);
-                    weapon.OnFire += () => HandleFire(baseWeapon);
+                    if (itemData is BaseWeaponData weaponData && itemController is WeaponDataController weaponController)
+                    {
+                        weaponController.OnReload -= () => WeaponSfx(weaponData.SoundSourceId, weaponData.ReloadSoundId);
+                        weaponController.OnReload += () => WeaponSfx(weaponData.SoundSourceId, weaponData.ReloadSoundId);
 
-                    weapon.OnReload -= () => HandleReload(baseWeapon);
-                    weapon.OnReload += () => HandleReload(baseWeapon);
+                        weaponController.OnFire -= () => WeaponSfx(weaponData.SoundSourceId, weaponData.FireSoundId);
+                        weaponController.OnFire += () => WeaponSfx(weaponData.SoundSourceId, weaponData.FireSoundId);
 
-                    weapon.OnOutOfAmmo -= () => HandleNoAmmo(baseWeapon);
-                    weapon.OnOutOfAmmo += () => HandleNoAmmo(baseWeapon);
+                        weaponController.OnOutOfAmmo -= () => WeaponSfx(weaponData.SoundSourceId, weaponData.NoAmmoSoundId);
+                        weaponController.OnOutOfAmmo += () => WeaponSfx(weaponData.SoundSourceId, weaponData.NoAmmoSoundId);
+                    }
                 }
             }
         }
-        private void HandleFire(BaseWeaponData weaponData) => view.RPC(nameof(PlaySound), RpcTarget.All, weaponData.FireSoundId, 1f, 1f, false, true);
-        private void HandleReload(BaseWeaponData weaponData) => view.RPC(nameof(PlaySound), RpcTarget.All, weaponData.ReloadSoundId, 1f, 1f, false, false);
-        private void HandleNoAmmo(BaseWeaponData weaponData) => view.RPC(nameof(PlaySound), RpcTarget.All, weaponData.NoAmmoSoundId, 1f, 1f, false, false);
-
-        [PunRPC]
-        private void PlaySound(int id, float volume, float pitch, bool loop, bool stopPrevious)
-        {
-            SoundData sound = sfxSounds.Find(n => n.id == id);
-            SoundManager.Play(sound.source, sound.clip, volume, pitch, loop, stopPrevious);
-        }
-
-        [PunRPC]
-        private void StopSound(int id)
-        {
-            SoundData sound = sfxSounds.Find(n => n.id == id);
-            sound.source.volume = Mathf.Lerp(sound.source.volume, 0f, soundStopSpeed * Time.deltaTime);
-            sound.source.pitch = Mathf.Lerp(sound.source.pitch, 0f, soundStopSpeed * Time.deltaTime);
-        }
-
-        [System.Serializable]
-        private class SoundData
-        {
-            public int id;
-            public AudioSource source;
-            public AudioClip clip;
-        }
+        private void WeaponSfx(int sourceId, int clipId) => soundManager.View.RPC(nameof(SoundManager.Play), RpcTarget.All, sourceId, clipId, Vector3.zero, 1f, 1f, false, false, false);
     }
 }

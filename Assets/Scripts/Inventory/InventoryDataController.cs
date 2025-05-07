@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Assets.Scripts.Saving.Data.InventoryData;
+using Assets.Scripts.Network;
 
 namespace Assets.Scripts.Inventory
 {
@@ -41,11 +42,15 @@ namespace Assets.Scripts.Inventory
 
         public void Init()
         {
+            bool isPlayer = GetComponent<PlayerNetworkManager>();
+
             foreach (var item in DefaultItems)
             {
                 if (item.BaseData is not BaseWeaponData data)
                 {
-                    aviableItems.Add(new DynamicItemData(item.BaseData));
+                    if ((PhotonNetwork.IsMasterClient && isPlayer) || item.BaseData.Id != 1)
+                        aviableItems.Add(new DynamicItemData(item.BaseData));
+
                     continue;
                 }
 

@@ -25,29 +25,34 @@ namespace Assets.Scripts.Inventory
         {
             if (weaponData != null)
             {
-                if (weaponData.reloadTime > 0f && nextAmmoIncrease <= Time.time)
+                if (weaponData.reloadTime == 1f)
                 {
-                    nextAmmoIncrease = Time.time + baseWeaponData.ReloadDuration;
+                    nextAmmoIncrease -= Time.deltaTime;
 
-                    Reload();
+                    if (weaponData.currentAmmo >= baseWeaponData.BaseAmmo || weaponData.overallAmmo <= 0)
+                    {
+                        weaponData.reloadTime = 0f;
+                        HandleReloadEnd();
+                        return;
+                    }
+
+                    if (nextAmmoIncrease <= 0f)
+                    {
+                        Reload();
+                        nextAmmoIncrease = baseWeaponData.ReloadSpeed;
+                    }
                 }
-
-                if (weaponData.reloadTime > 0f)
-                    weaponData.reloadTime -= Time.deltaTime;
-                else
-                    HandleReloadEnd();
-
                 if (inputSource.BoolBinds[InputHandler.InputBind.MOUSELEFT] && weaponData.fireTime <= Time.time)
                 {
                     if (!PhotonNetwork.OfflineMode && !Convert.ToBoolean(PhotonNetwork.CurrentRoom.CustomProperties[Connector.ROOM_HASHTABLE_ALLOW_DAMAGE_KEY]))
                         return;
 
-                    if (weaponData.reloadTime > 0f)
-                        weaponData.reloadTime = 0f;
+                    weaponData.reloadTime = 0f;
+                    HandleReloadEnd();
 
                     if (weaponData.currentAmmo < 1 && weaponData.overallAmmo > 0)
-                        weaponData.reloadTime = baseWeaponData.ReloadDuration * (weaponData.overallAmmo - weaponData.currentAmmo);
-                    else if (weaponData.currentAmmo > 0 || weaponData.overallAmmo > 0)
+                        weaponData.reloadTime = 1f;
+                    else if (weaponData.currentAmmo > 0)
                     {
                         weaponData.currentAmmo--;
                         weaponData.fireTime = Time.time + 1f / baseWeaponData.FireRate;
@@ -71,20 +76,13 @@ namespace Assets.Scripts.Inventory
 
         private void OnBindToggle(InputHandler.InputBind bind)
         {
-            if (bind == InputHandler.InputBind.MOUSELEFT && weaponData.currentAmmo < 1 && weaponData.overallAmmo < 1)
+            if (bind == InputHandler.InputBind.MOUSELEFT && weaponData.currentAmmo < 1)
                 OutOfAmmoEvent();
             if (bind == InputHandler.InputBind.MOUSELEFT)
                 OnStartActionEventTrigger();
-            if (bind == InputHandler.InputBind.RELOADTOGGLE && weaponData.currentAmmo < weaponData.overallAmmo && weaponData.reloadTime <= 0f && weaponData.overallAmmo > 0)
-            {
-                weaponData.reloadTime = baseWeaponData.ReloadDuration * (weaponData.overallAmmo - weaponData.currentAmmo);
-                handsAnimator.SetBool(ReloadAnimationName, true);
-                itemAnimator.SetBool(ReloadAnimationName, true);
-
-                ReloadEvent();
-                UnAimedEvent();
-            }
-            else if (bind == InputHandler.InputBind.MOUSERIGHT && weaponData.reloadTime <= 0f)
+            if (bind == InputHandler.InputBind.RELOADTOGGLE && weaponData.overallAmmo > 0 && weaponData.currentAmmo < baseWeaponData.BaseAmmo)
+                weaponData.reloadTime = 1f;
+            else if (bind == InputHandler.InputBind.MOUSERIGHT && weaponData.reloadTime == 0f)
             {
                 AimedEvent();
                 OnStartActionEventTrigger();
@@ -103,19 +101,25 @@ namespace Assets.Scripts.Inventory
         {
             handsAnimator.SetBool(ReloadAnimationName, false);
             itemAnimator.SetBool(ReloadAnimationName, false);
+
+            ReloadEndEvent();
         }
         private void Reload()
         {
+            handsAnimator.SetBool(ReloadAnimationName, true);
+            itemAnimator.SetBool(ReloadAnimationName, true);
+
             weaponData.overallAmmo--;
             weaponData.currentAmmo++;
 
+            UnAimedEvent();
             ReloadEvent();
             AmmoChangeEvent();
         }
         private void OnDisable()
         {
             if (weaponData != null)
-                weaponData.reloadTime = 0;
+                weaponData.reloadTime = 0f;
 
             inputSource.InputRecieved -= OnBindToggle;
             inputSource.InputCanceled -= OnBindCancel;
